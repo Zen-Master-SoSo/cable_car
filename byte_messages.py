@@ -1,5 +1,5 @@
-"""Provides classes which are primarily used to pass JSON-encoded messages across a network,
-but could also be used for other purposes, such as an undo/redo facility."""
+""" Provides classes which are primarily used to pass JSON-encoded messages across a network,
+but could also be used for other purposes, such as an undo/redo facility. """
 
 import sys, logging, json
 from socket import gethostname

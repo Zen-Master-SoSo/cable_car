@@ -1,6 +1,4 @@
-"""Provides:
-1. the Messenger class which sends and receives encoded Message objects
-2. the Message class, an abstract framework for encoding/decoding messages for transfer """
+""" Provides the Messenger class which sends and receives encoded Message objects """
 
 import logging, socket
 from select import select
@@ -9,7 +7,8 @@ from select import select
 class Messenger:
 	"""Sends and receives encoded Message objects across the network."""
 
-	buffer_size				= 1024
+	buffer_size		= 1024
+	instance_count	= 0
 
 	def __init__(self, sock, message_class):
 		"""Instantiate a Messenger which communicates over the given socket.
@@ -22,10 +21,14 @@ class Messenger:
 		self.__message_class = message_class
 		self.__read_buffer = bytearray()
 		self.__write_buffer = bytearray()
+		Messenger.instance_count += 1
+		self._instance_id = Messenger.instance_count
+		logging.debug("Instantiated Messenger %d" % self._instance_id)
 		self.closed = False
 
 
 	def close(self):
+		logging.debug("Messenger %d saying SHUT_RDWR" % self._instance_id)
 		self.__sock.shutdown(socket.SHUT_RDWR)
 		self.closed = True
 
@@ -35,7 +38,7 @@ class Messenger:
 		Call this function regularly to send/receive encoded/decoded Message class objects. """
 
 		if self.closed:
-			logging.debug("trying to do transfers when closed!")
+			logging.debug("Messenger %d trying to do transfers when closed!" % self._instance_id)
 			return False
 
 		# Do select()
@@ -48,7 +51,7 @@ class Messenger:
 
 		# If this socket errored, close for now. TODO: Continuous improvement wrt error-checking
 		if errored_sockets:
-			logging.error("My socket returned as errored from select()!")
+			logging.error("Messenger %d socket returned as errored from select()" % self._instance_id)
 			return self.close()
 
 		# Read data if there anything there:
@@ -64,13 +67,14 @@ class Messenger:
 				self.close()
 			else:
 				if len(data):
-					logging.debug("read %d bytes" % len(data))
+					logging.debug("Messenger %d read %d bytes" % (self._instance_id, len(data)))
 					self.__read_buffer += data
 
 		# Write data if necessary:
 		if writable_sockets and len(self.__write_buffer):
 			try:
 				bytes_sent = self.__sock.send(self.__write_buffer)
+				logging.debug("Messenger %d wrote %d bytes" % (self._instance_id, bytes_sent))
 			except BrokenPipeError:
 				self.closed = True
 			except IOError as e:
@@ -89,10 +93,8 @@ class Messenger:
 
 
 	def send(self, message):
-		"""Appends a bytearray-encoded message to the write buffer."""
-		msg = message.encoded()
-		logging.debug("write %d bytes" % len(msg))
-		self.__write_buffer += msg
+		"""Appends an encoded message to the write buffer."""
+		self.__write_buffer += message.encoded()
 
 
 class Message:

@@ -1,5 +1,5 @@
-"""Provides classes which are primarily used to pass JSON-encoded messages across a network,
-but could also be used for other purposes, such as an undo/redo facility."""
+""" Provides classes which are primarily used to pass JSON-encoded messages across a network,
+but could also be used for other purposes, such as an undo/redo facility. """
 
 import sys, logging, json
 from socket import gethostname
@@ -28,7 +28,7 @@ class JSON_Message(Message):
 		if pos > -1:
 			try:
 				msg_data = read_buffer[:pos].decode('utf-8')
-				logging.debug(msg_data)
+				logging.debug("Decoding JSON_Message: " + msg_data)
 				payload = json.loads(msg_data)
 			except Exception as e:
 				logging.error(e)
