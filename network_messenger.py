@@ -2,8 +2,7 @@
 1. the NetworkMessenger class which sends and receives encoded Message objects
 2. the Message class, an abstract framework for encoding/decoding messages for transfer """
 
-import logging
-from socket import *
+import logging, socket
 from select import select
 
 
@@ -29,7 +28,7 @@ class NetworkMessenger:
 
 
 	def close(self):
-		self.__sock.shutdown(SHUT_RDWR)
+		self.__sock.shutdown(socket.SHUT_RDWR)
 		self.closed = True
 
 
@@ -84,7 +83,7 @@ class NetworkMessenger:
 
 	def get(self):
 		"""Returns a Message object if there is data available, otherwise returns None"""
-		message, byte_len = self.__message_class.from_buffer(self.__read_buffer)
+		message, byte_len = self.__message_class.peel_from_buffer(self.__read_buffer)
 		if byte_len:
 			self.__read_buffer = self.__read_buffer[byte_len + 1:]
 			return message
@@ -117,12 +116,19 @@ class Message:
 if __name__ == '__main__':
 
 	import optparse, time, threading, sys
-	from cable_car.json_messages import *
 
 	p = optparse.OptionParser()
 	p.add_option('--loopback', '-l', action='store_true')
 	p.add_option('--verbose', '-v', action='store_true')
+	p.add_option('--message-class', type='string', default='JSON_Message')
 	options, arguments = p.parse_args()
+
+	if options.message_class == "JSON_Message":
+		from cable_car.json_messages import *
+	elif options.message_class == "Byte_Message":
+		from cable_car.byte_messages import *
+	else:
+		raise ValueError("%s is not a valid message class" % options.message_class)
 
 	logging.basicConfig(
 		stream=sys.stdout,
@@ -133,8 +139,8 @@ if __name__ == '__main__':
 
 	def _test_client():
 		global _test_enable
-		sock = socket(AF_INET, SOCK_STREAM)
-		sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		sock.settimeout(3)
 		time.sleep(0.25)
 		logging.debug("Client connecting")
@@ -152,9 +158,9 @@ if __name__ == '__main__':
 	def _test_server():
 		global _test_enable
 		logging.debug("Server listening")
-		sock = socket(AF_INET, SOCK_STREAM)
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		sock.setblocking(0)
-		sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+		sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		sock.bind(('127.0.0.1', 8222))
 		sock.listen()
 		while _test_enable:
@@ -173,7 +179,7 @@ if __name__ == '__main__':
 
 
 	def _test_comms(sock):
-		msgr = NetworkMessenger(sock, JSON_Message)
+		msgr = NetworkMessenger(sock, globals()[options.message_class])
 		msgr.id_sent = False
 		msgr.id_received = False
 		while _test_enable:

@@ -13,13 +13,14 @@ class JSON_Message(Message):
 
 
 	@classmethod
-	def from_buffer(cls, read_buffer):
-		""" Select a part of the NetworkMessenger's read buffer as a complete message bytearray,
-		based upon the presence of a carriage return message terminator in the buffer.
+	def peel_from_buffer(cls, read_buffer):
+		""" Select the relevant part of a NetworkMessenger's read buffer as a complete message bytearray.
+		In the JSON_Message class the determination of message completeness is the presence of a carriage
+		return message terminator in the buffer.
 		Returns a tuple (Message, bytes_read) """
 		pos = read_buffer.find(cls.terminator)
 		if pos > -1:
-			return JSON_Message.decode(read_buffer[:pos]), pos
+			return cls.decode(read_buffer[:pos]), pos
 		return None, 0
 
 

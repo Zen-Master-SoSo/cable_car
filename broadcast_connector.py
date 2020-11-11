@@ -1,6 +1,6 @@
 """ Provides the BroadcastConnector connector class """
 import threading, time, logging
-from socket import *
+from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR
 
 
 class BroadcastConnector:
