@@ -16,10 +16,11 @@ class Messenger:
 	buffer_size		= 1024
 	instance_count	= 0
 
-	def __init__(self, sock):
+	def __init__(self, sock, message_class):
 		"""Instantiate a Messenger which communicates over the given socket.
 		Pass an opened TCP socket to communicate with."""
 		self.__sock = sock
+		self.__message_class = message_class
 		self.__sock.setblocking(0)
 		self.local_ip = sock.getsockname()[0]
 		self.remote_ip = sock.getpeername()[0]
@@ -89,7 +90,7 @@ class Messenger:
 
 	def get(self):
 		"""Returns a Message object if there is data available, otherwise returns None """
-		message, byte_len = Message.peel_from_buffer(self.__read_buffer)
+		message, byte_len = self.__message_class.peel_from_buffer(self.__read_buffer)
 		if byte_len:
 			self.__read_buffer = self.__read_buffer[byte_len + 1:]
 			return message
@@ -168,7 +169,7 @@ if __name__ == '__main__':
 
 
 	def _test_comms(sock):
-		msgr = Messenger(sock)
+		msgr = Messenger(sock, Message)
 		msgr.id_sent = False
 		msgr.id_received = False
 		while _test_enable:
