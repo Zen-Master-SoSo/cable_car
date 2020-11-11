@@ -4,42 +4,45 @@ but could also be used for other purposes, such as an undo/redo facility. """
 import sys, logging, json
 from socket import gethostname
 from getpass import getuser
-from cable_car.messenger import Message
 
 
-class JSON_Message(Message):
+class Message:
+	""" A class which encodes and decodes itself as JSON.
+	Note: the __init__ function of any subclass you create must be able to be called with no
+	arguments, as the "Message.peel_from_buffer" function creates an instance with no args
+	before converting the JSON into class attributes. """
 
 	terminator = b"\n"
 	class_defs = {}	# dictionary of <class name>: <class definition>
 
 	@classmethod
 	def register(cls):
-		"""Registers a subclass of Message so that instances may be constructed by the Message class."""
+		"""Registers class definitions for the "Message.peel_from_buffer" function."""
 		cls.class_defs[cls.__name__] = cls
 
 
 	@classmethod
 	def peel_from_buffer(cls, read_buffer):
 		""" Select the relevant part of a Messenger's read buffer as a complete message bytearray.
-		In the JSON_Message class the determination of message completeness is the presence of a carriage
-		return message terminator in the buffer.
+		In the Message class in this module, the determination of message completeness is the
+		presence of a carriage return message terminator in the buffer.
 		Returns a tuple (Message, bytes_read) """
 		pos = read_buffer.find(cls.terminator)
 		if pos > -1:
 			try:
 				msg_data = read_buffer[:pos].decode('utf-8')
-				logging.debug("Decoding JSON_Message: " + msg_data)
+				logging.debug("Decoding Message: " + msg_data)
 				payload = json.loads(msg_data)
 			except Exception as e:
 				logging.error(e)
 			else:
 				if payload[0] in cls.class_defs:
-					msg = cls.class_defs[payload[0]]({})
+					msg = cls.class_defs[payload[0]]()
 					for key, value in payload[1].items():
 						setattr(msg, key, value)
 					return msg, pos
 				else:
-					raise KeyError("%s is not a registered JSON_Message class" % payload[0])
+					raise KeyError("%s is not a registered Message class" % payload[0])
 		return None, 0
 
 
@@ -53,24 +56,24 @@ class JSON_Message(Message):
 
 
 
-class Identify(JSON_Message):
+class Identify(Message):
 	def __init__(self, username=None, hostname=None):
 		self.username = username or getuser()
 		self.hostname = hostname or gethostname()
 
 
 
-class Join(JSON_Message):
+class Join(Message):
 	pass
 
 
 
-class Retry(JSON_Message):
+class Retry(Message):
 	pass
 
 
 
-class Quit(JSON_Message):
+class Quit(Message):
 	pass
 
 
@@ -96,7 +99,7 @@ if __name__ == '__main__':
 	encoded_message = msg.encoded()
 
 	buff = encoded_message
-	msg, pos = JSON_Message.peel_from_buffer(buff)
+	msg, pos = Message.peel_from_buffer(buff)
 	assert(isinstance(msg, Join))
 	assert(pos == len(encoded_message) - 1)
 
@@ -109,7 +112,7 @@ if __name__ == '__main__':
 	encoded_message = msg.encoded()
 
 	buff = encoded_message
-	msg, pos = JSON_Message.peel_from_buffer(buff)
+	msg, pos = Message.peel_from_buffer(buff)
 	assert(isinstance(msg, Identify))
 	assert(pos == len(encoded_message) - 1)
 	assert(username == msg.username)
@@ -121,16 +124,16 @@ if __name__ == '__main__':
 	buff.extend(Retry().encoded())
 	buff.extend(Quit().encoded())
 
-	msg, byte_len = JSON_Message.peel_from_buffer(buff)
+	msg, byte_len = Message.peel_from_buffer(buff)
 	buff = buff[byte_len + 1:]
 	assert(isinstance(msg, Join))
-	msg, byte_len = JSON_Message.peel_from_buffer(buff)
+	msg, byte_len = Message.peel_from_buffer(buff)
 	buff = buff[byte_len + 1:]
 	assert(isinstance(msg, Identify))
-	msg, byte_len = JSON_Message.peel_from_buffer(buff)
+	msg, byte_len = Message.peel_from_buffer(buff)
 	buff = buff[byte_len + 1:]
 	assert(isinstance(msg, Retry))
-	msg, byte_len = JSON_Message.peel_from_buffer(buff)
+	msg, byte_len = Message.peel_from_buffer(buff)
 	buff = buff[byte_len + 1:]
 	assert(isinstance(msg, Quit))
 

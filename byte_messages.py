@@ -4,11 +4,10 @@ but could also be used for other purposes, such as an undo/redo facility. """
 import sys, logging, json
 from socket import gethostname
 from getpass import getuser
-from cable_car.messenger import Message
 
 
-class Byte_Message(Message):
-	"""A Message class which encodes and decodes as a series of compact bytes.
+class Message:
+	"""A class which encodes and decodes itself as a series of compact bytes.
 	The format of each message is:
 		Byte
 		--------    ----------------------------------------------------------------------
@@ -16,8 +15,18 @@ class Byte_Message(Message):
 		   1        Single-digit class code, identifying the Message class to instantiate
 		2 .. len    (optional) Encoded data which is unique to the subclass
 		--------    ----------------------------------------------------------------------
+	Some requirements when creating subclasses:
 
-	Each class which subclasses this must define custom encode / decode functions."""
+	The __init__ function of any subclass you create must be able to be called with no
+	arguments, as the "Message.peel_from_buffer" function creates an instance with no args
+	before converting the JSON into class attributes.
+
+	Each subclass must define an "encode" function which returns a bytearray.
+
+	Each subclass must define a "decode_data" function which uses the data passed to it
+	from the "peel_from_buffer" method to populate attributes of the subclass.
+	For an example, see the "Identify" class defined in this module.
+	"""
 
 	class_defs = {} # dictionary of <code>: <class definition>
 
@@ -31,25 +40,25 @@ class Byte_Message(Message):
 	@classmethod
 	def peel_from_buffer(cls, read_buffer):
 		""" Select the relevant part of a Messenger's read buffer as a complete message bytearray.
-		In the Byte_Message class the determination of message completeness is determined by the number
-		of bytes to read from the buffer, determined by the first byte of the message."
+		In the Message class defined in this moduel, message completeness is  determined by the
+		number of bytes to read from the buffer, determined by the first byte of the message."
 		Returns a tuple (Message, bytes_read) """
 		if(len(read_buffer) and len(read_buffer) >= read_buffer[0]):
 			logging.debug("Received %d-byte message" % read_buffer[0])
 			if read_buffer[1] in cls.class_defs:
 				msg = cls.class_defs[read_buffer[1]]()
-				assert(isinstance(msg, Message))
 				if read_buffer[0] > 2:
 					msg.decode_data(read_buffer[2:])
 				return msg, read_buffer[0]
 			else:
-				raise KeyError("%d is not a registered Byte_Message code" % read_buffer[1])
+				raise KeyError("%d is not a registered Message code" % read_buffer[1])
 		return None, 0
 
 
 	def encoded(self):
 		"""Called from Messenger, prepends the byte length and class code to the return value of
-		this class' encode() function. Do not extend this function. Use the encode() function in your subclass."""
+		this class' "encode" function. Do not extend this function. Extend the "encode" function in
+		your subclass instead."""
 		encoded_data = self.encode()
 		data_len = len(encoded_data)
 		logging.debug("Encoded %d-bytes of message data" % data_len)
@@ -72,7 +81,7 @@ class Byte_Message(Message):
 
 
 
-class Identify(Byte_Message):
+class Identify(Message):
 	code = 0x1
 	def __init__(self, username=None, hostname=None):
 		self.username = username or getuser()
@@ -89,19 +98,19 @@ class Identify(Byte_Message):
 		return ("%s@%s" % (self.username, self.hostname)).encode('ASCII')
 
 
-class Join(Byte_Message):
+class Join(Message):
 	code = 0x2
 	pass
 
 
 
-class Retry(Byte_Message):
+class Retry(Message):
 	code = 0x3
 	pass
 
 
 
-class Quit(Byte_Message):
+class Quit(Message):
 	code = 0x4
 	pass
 
@@ -128,7 +137,7 @@ if __name__ == '__main__':
 	encoded_message = msg.encoded()
 
 	buff = encoded_message
-	msg, pos = Byte_Message.peel_from_buffer(buff)
+	msg, pos = Message.peel_from_buffer(buff)
 	assert(isinstance(msg, Join))
 	assert(pos == len(encoded_message))
 
@@ -141,7 +150,7 @@ if __name__ == '__main__':
 	encoded_message = msg.encoded()
 
 	buff = encoded_message
-	msg, pos = Byte_Message.peel_from_buffer(buff)
+	msg, pos = Message.peel_from_buffer(buff)
 	assert(isinstance(msg, Identify))
 	assert(pos == len(encoded_message))
 	assert(username == msg.username)
@@ -153,16 +162,16 @@ if __name__ == '__main__':
 	buff.extend(Retry().encoded())
 	buff.extend(Quit().encoded())
 
-	msg, byte_len = Byte_Message.peel_from_buffer(buff)
+	msg, byte_len = Message.peel_from_buffer(buff)
 	buff = buff[byte_len:]
 	assert(isinstance(msg, Join))
-	msg, byte_len = Byte_Message.peel_from_buffer(buff)
+	msg, byte_len = Message.peel_from_buffer(buff)
 	buff = buff[byte_len:]
 	assert(isinstance(msg, Identify))
-	msg, byte_len = Byte_Message.peel_from_buffer(buff)
+	msg, byte_len = Message.peel_from_buffer(buff)
 	buff = buff[byte_len:]
 	assert(isinstance(msg, Retry))
-	msg, byte_len = Byte_Message.peel_from_buffer(buff)
+	msg, byte_len = Message.peel_from_buffer(buff)
 	buff = buff[byte_len:]
 	assert(isinstance(msg, Quit))
 

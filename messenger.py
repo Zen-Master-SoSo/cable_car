@@ -5,20 +5,24 @@ from select import select
 
 
 class Messenger:
-	"""Sends and receives encoded Message objects across the network."""
+	"""Sends and receives encoded Message objects across the network.
+	In order to use this class you must also import a Message class from one of the available
+	options. Presently, the only two available are "json_messages" and "byte_messages". I.e.:
+
+		from cable_car.json_messages import Message
+
+	"""
 
 	buffer_size		= 1024
 	instance_count	= 0
 
-	def __init__(self, sock, message_class):
+	def __init__(self, sock):
 		"""Instantiate a Messenger which communicates over the given socket.
-		Pass an opened TCP socket to communicate over, and the class definition (not instance) of
-		the Message class to use to encode and decode messages for transfer."""
+		Pass an opened TCP socket to communicate with."""
 		self.__sock = sock
 		self.__sock.setblocking(0)
 		self.local_ip = sock.getsockname()[0]
 		self.remote_ip = sock.getpeername()[0]
-		self.__message_class = message_class
 		self.__read_buffer = bytearray()
 		self.__write_buffer = bytearray()
 		Messenger.instance_count += 1
@@ -85,7 +89,7 @@ class Messenger:
 
 	def get(self):
 		"""Returns a Message object if there is data available, otherwise returns None """
-		message, byte_len = self.__message_class.peel_from_buffer(self.__read_buffer)
+		message, byte_len = Message.peel_from_buffer(self.__read_buffer)
 		if byte_len:
 			self.__read_buffer = self.__read_buffer[byte_len + 1:]
 			return message
@@ -97,19 +101,6 @@ class Messenger:
 		self.__write_buffer += message.encoded()
 
 
-class Message:
-
-	def __init__(self, none=None):
-		"""Note: you must allow the __init__ function of any classes which subclass Message to be called
-		with no parameters so that instances of your subclass may be constructed when decoding. """
-		pass
-
-	@classmethod
-	def register(cls):
-		"""Registers a subclass of Message so that instances may be constructed by the Message class."""
-		pass
-
-
 
 if __name__ == '__main__':
 
@@ -118,15 +109,15 @@ if __name__ == '__main__':
 	p = optparse.OptionParser()
 	p.add_option('--loopback', '-l', action='store_true')
 	p.add_option('--verbose', '-v', action='store_true')
-	p.add_option('--message-class', type='string', default='JSON_Message')
+	p.add_option('--transport', type='string', default='JSON')
 	options, arguments = p.parse_args()
 
-	if options.message_class == "JSON_Message":
+	if options.transport == "JSON":
 		from cable_car.json_messages import *
-	elif options.message_class == "Byte_Message":
+	elif options.transport == "bytes":
 		from cable_car.byte_messages import *
 	else:
-		raise ValueError("%s is not a valid message class" % options.message_class)
+		raise ValueError("%s is not a valid transport" % options.transport)
 
 	logging.basicConfig(
 		stream=sys.stdout,
@@ -177,7 +168,7 @@ if __name__ == '__main__':
 
 
 	def _test_comms(sock):
-		msgr = Messenger(sock, globals()[options.message_class])
+		msgr = Messenger(sock)
 		msgr.id_sent = False
 		msgr.id_received = False
 		while _test_enable:
