@@ -9,10 +9,7 @@ from select import select
 class NetworkMessenger:
 	"""Sends and receives encoded Message objects across the network."""
 
-	local_ip				= None
-	remote_ip				= None
 	buffer_size				= 1024
-	closed					= False
 
 	def __init__(self, sock, message_class):
 		"""Instantiate a NetworkMessenger which communicates over the given socket.
@@ -25,6 +22,7 @@ class NetworkMessenger:
 		self.__message_class = message_class
 		self.__read_buffer = bytearray()
 		self.__write_buffer = bytearray()
+		self.closed = False
 
 
 	def close(self):
@@ -82,7 +80,7 @@ class NetworkMessenger:
 
 
 	def get(self):
-		"""Returns a Message object if there is data available, otherwise returns None"""
+		"""Returns a Message object if there is data available, otherwise returns None """
 		message, byte_len = self.__message_class.peel_from_buffer(self.__read_buffer)
 		if byte_len:
 			self.__read_buffer = self.__read_buffer[byte_len + 1:]
@@ -91,15 +89,13 @@ class NetworkMessenger:
 
 
 	def send(self, message):
-		"""Puts a string-encoded message into the write buffer."""
-		msg = message.encode()
+		"""Appends a bytearray-encoded message to the write buffer."""
+		msg = message.encoded()
 		logging.debug("write %d bytes" % len(msg))
 		self.__write_buffer += msg
 
 
 class Message:
-
-	class_defs = {}
 
 	def __init__(self, none=None):
 		"""Note: you must allow the __init__ function of any classes which subclass Message to be called
@@ -109,7 +105,7 @@ class Message:
 	@classmethod
 	def register(cls):
 		"""Registers a subclass of Message so that instances may be constructed by the Message class."""
-		Message.class_defs[cls.__name__] = cls
+		pass
 
 
 

@@ -10,6 +10,12 @@ from cable_car.network_messenger import Message
 class JSON_Message(Message):
 
 	terminator = b"\n"
+	class_defs = {}	# dictionary of <class name>: <class definition>
+
+	@classmethod
+	def register(cls):
+		"""Registers a subclass of Message so that instances may be constructed by the Message class."""
+		cls.class_defs[cls.__name__] = cls
 
 
 	@classmethod
@@ -20,33 +26,30 @@ class JSON_Message(Message):
 		Returns a tuple (Message, bytes_read) """
 		pos = read_buffer.find(cls.terminator)
 		if pos > -1:
-			return cls.decode(read_buffer[:pos]), pos
+			try:
+				msg_data = read_buffer[:pos].decode('utf-8')
+				logging.debug(msg_data)
+				payload = json.loads(msg_data)
+			except Exception as e:
+				logging.error(e)
+			else:
+				if payload[0] in cls.class_defs:
+					msg = cls.class_defs[payload[0]]({})
+					for key, value in payload[1].items():
+						setattr(msg, key, value)
+					return msg, pos
+				else:
+					raise KeyError("%s is not a registered JSON_Message class" % payload[0])
 		return None, 0
 
 
-	@classmethod
-	def decode(cls, msg):
-		"""Returns an Message from a JSON-encoded data."""
-		try:
-			logging.debug(msg.decode('utf-8'))
-			payload = json.loads(msg.decode('utf-8'))
-		except Exception as e:
-			logging.error(e)
-		else:
-			if payload[0] in Message.class_defs:
-				msg = Message.class_defs[payload[0]]({})
-				for key, value in payload[1].items():
-					setattr(msg, key, value)
-				return msg
-			else:
-				raise KeyError("%s is not a registered message" % payload[0])
-
-	def encode(self):
+	def encoded(self):
 		"""JSON-encode this message for sending over a network and such."""
-		return json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':')).encode() + self.terminator
+		return bytearray(json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':')).encode() + self.terminator)
+
 
 	def __str__(self):
-		return self.encode()
+		return self.encoded()
 
 
 
@@ -86,31 +89,51 @@ if __name__ == '__main__':
 		format="%(relativeCreated)6d [%(filename)24s:%(lineno)3d] %(message)s"
 	)
 
-	msg = Join()
-	assert(isinstance(msg, Message))
-	assert(isinstance(msg, Join))
-	join_msg = msg.encode()
+	# Test basic encoding/decoding:
 
-	msg = JSON_Message.decode(join_msg)
-	assert(isinstance(msg, Join))
-	assert(isinstance(msg, Message))
+    msg = Join()
+    assert(isinstance(msg, Join))
+    encoded_message = msg.encoded()
 
-	msg = Identify()
-	assert(isinstance(msg, Message))
-	assert(isinstance(msg, Identify))
-	assert(msg.username is not None)
-	assert(msg.hostname is not None)
-	username = msg.username
-	hostname = msg.hostname
-	identify_msg = msg.encode()
+    buff = encoded_message
+    msg, pos = JSON_Message.peel_from_buffer(buff)
+    assert(isinstance(msg, Join))
+    assert(pos == len(encoded_message) - 1)
 
-	msg = JSON_Message.decode(identify_msg)
-	assert(isinstance(msg, Message))
-	assert(isinstance(msg, Identify))
-	assert(msg.username is not None)
-	assert(msg.hostname is not None)
-	assert(username == msg.username)
-	assert(hostname == msg.hostname)
+    msg = Identify()
+    assert(isinstance(msg, Identify))
+    assert(msg.username is not None)
+    assert(msg.hostname is not None)
+    username = msg.username
+    hostname = msg.hostname
+    encoded_message = msg.encoded()
+
+    buff = encoded_message
+    msg, pos = JSON_Message.peel_from_buffer(buff)
+    assert(isinstance(msg, Identify))
+    assert(pos == len(encoded_message) - 1)
+    assert(username == msg.username)
+    assert(hostname == msg.hostname)
+
+    # Test passing several messages in one buffer
+    buff = Join().encoded()
+    buff.extend(Identify().encoded())
+    buff.extend(Retry().encoded())
+    buff.extend(Quit().encoded())
+
+    msg, byte_len = JSON_Message.peel_from_buffer(buff)
+    buff = buff[byte_len + 1:]
+    assert(isinstance(msg, Join))
+    msg, byte_len = JSON_Message.peel_from_buffer(buff)
+    buff = buff[byte_len + 1:]
+    assert(isinstance(msg, Identify))
+    msg, byte_len = JSON_Message.peel_from_buffer(buff)
+    buff = buff[byte_len + 1:]
+    assert(isinstance(msg, Retry))
+    msg, byte_len = JSON_Message.peel_from_buffer(buff)
+    buff = buff[byte_len + 1:]
+    assert(isinstance(msg, Quit))
+
 
 	print("OKAY")
 
