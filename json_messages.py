@@ -91,48 +91,48 @@ if __name__ == '__main__':
 
 	# Test basic encoding/decoding:
 
-    msg = Join()
-    assert(isinstance(msg, Join))
-    encoded_message = msg.encoded()
+	msg = Join()
+	assert(isinstance(msg, Join))
+	encoded_message = msg.encoded()
 
-    buff = encoded_message
-    msg, pos = JSON_Message.peel_from_buffer(buff)
-    assert(isinstance(msg, Join))
-    assert(pos == len(encoded_message) - 1)
+	buff = encoded_message
+	msg, pos = JSON_Message.peel_from_buffer(buff)
+	assert(isinstance(msg, Join))
+	assert(pos == len(encoded_message) - 1)
 
-    msg = Identify()
-    assert(isinstance(msg, Identify))
-    assert(msg.username is not None)
-    assert(msg.hostname is not None)
-    username = msg.username
-    hostname = msg.hostname
-    encoded_message = msg.encoded()
+	msg = Identify()
+	assert(isinstance(msg, Identify))
+	assert(msg.username is not None)
+	assert(msg.hostname is not None)
+	username = msg.username
+	hostname = msg.hostname
+	encoded_message = msg.encoded()
 
-    buff = encoded_message
-    msg, pos = JSON_Message.peel_from_buffer(buff)
-    assert(isinstance(msg, Identify))
-    assert(pos == len(encoded_message) - 1)
-    assert(username == msg.username)
-    assert(hostname == msg.hostname)
+	buff = encoded_message
+	msg, pos = JSON_Message.peel_from_buffer(buff)
+	assert(isinstance(msg, Identify))
+	assert(pos == len(encoded_message) - 1)
+	assert(username == msg.username)
+	assert(hostname == msg.hostname)
 
-    # Test passing several messages in one buffer
-    buff = Join().encoded()
-    buff.extend(Identify().encoded())
-    buff.extend(Retry().encoded())
-    buff.extend(Quit().encoded())
+	# Test passing several messages in one buffer
+	buff = Join().encoded()
+	buff.extend(Identify().encoded())
+	buff.extend(Retry().encoded())
+	buff.extend(Quit().encoded())
 
-    msg, byte_len = JSON_Message.peel_from_buffer(buff)
-    buff = buff[byte_len + 1:]
-    assert(isinstance(msg, Join))
-    msg, byte_len = JSON_Message.peel_from_buffer(buff)
-    buff = buff[byte_len + 1:]
-    assert(isinstance(msg, Identify))
-    msg, byte_len = JSON_Message.peel_from_buffer(buff)
-    buff = buff[byte_len + 1:]
-    assert(isinstance(msg, Retry))
-    msg, byte_len = JSON_Message.peel_from_buffer(buff)
-    buff = buff[byte_len + 1:]
-    assert(isinstance(msg, Quit))
+	msg, byte_len = JSON_Message.peel_from_buffer(buff)
+	buff = buff[byte_len + 1:]
+	assert(isinstance(msg, Join))
+	msg, byte_len = JSON_Message.peel_from_buffer(buff)
+	buff = buff[byte_len + 1:]
+	assert(isinstance(msg, Identify))
+	msg, byte_len = JSON_Message.peel_from_buffer(buff)
+	buff = buff[byte_len + 1:]
+	assert(isinstance(msg, Retry))
+	msg, byte_len = JSON_Message.peel_from_buffer(buff)
+	buff = buff[byte_len + 1:]
+	assert(isinstance(msg, Quit))
 
 
 	print("OKAY")
