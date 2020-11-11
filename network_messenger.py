@@ -130,11 +130,9 @@ if __name__ == '__main__':
 		format="%(relativeCreated)6d [%(filename)24s:%(lineno)3d] %(message)s"
 	)
 
-	test_enable = True
-
 
 	def _test_client():
-		global test_enable
+		global _test_enable
 		sock = socket(AF_INET, SOCK_STREAM)
 		sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 		sock.settimeout(3)
@@ -145,28 +143,28 @@ if __name__ == '__main__':
 		except Exception as e:
 			sock.close()
 			logging.error(e)
-			test_enable = False
+			_test_enable = False
 		logging.debug("Client connected")
 		_test_comms(sock)
 		logging.debug("Exiting _test_client")
 
 
 	def _test_server():
-		global test_enable
+		global _test_enable
 		logging.debug("Server listening")
 		sock = socket(AF_INET, SOCK_STREAM)
 		sock.setblocking(0)
 		sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 		sock.bind(('127.0.0.1', 8222))
 		sock.listen()
-		while test_enable:
+		while _test_enable:
 			try:
 				sock, address_pair = sock.accept()
 			except BlockingIOError as be:
 				pass
 			except Exception as e:
 				logging.error(e)
-				test_enable = False
+				_test_enable = False
 			else:
 				break
 		logging.debug("Server connected")
@@ -178,7 +176,7 @@ if __name__ == '__main__':
 		msgr = NetworkMessenger(sock, JSON_Message)
 		msgr.id_sent = False
 		msgr.id_received = False
-		while test_enable:
+		while _test_enable:
 			msgr.xfer_comms()
 			msg = msgr.get()
 			if msg is not None:
@@ -194,12 +192,12 @@ if __name__ == '__main__':
 
 
 	def _test_timeout():
-		global test_enable
+		global _test_enable
 		_quitting_time = time.time() + 10.0
-		while test_enable:
+		while _test_enable:
 			if time.time() >= _quitting_time: break
 			time.sleep(0.1)
-		test_enable = False
+		_test_enable = False
 		logging.debug("Exiting _test_timeout")
 
 
@@ -208,13 +206,14 @@ if __name__ == '__main__':
 	server_thread = threading.Thread(target=_test_server)
 	timeout_thread = threading.Thread(target=_test_timeout)
 	# Start threads:
+	_test_enable = True
 	client_thread.start()
 	server_thread.start()
 	timeout_thread.start()
 	# Wait for threads to exit:
 	client_thread.join()
 	server_thread.join()
-	test_enable = False
+	_test_enable = False
 	timeout_thread.join()
 
 	print("OKAY")
