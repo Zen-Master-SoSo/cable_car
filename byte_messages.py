@@ -4,7 +4,7 @@ but could also be used for other purposes, such as an undo/redo facility."""
 import sys, logging, json
 from socket import gethostname
 from getpass import getuser
-from cable_car.network_messenger import Message
+from cable_car.messenger import Message
 
 
 class Byte_Message(Message):
@@ -30,7 +30,7 @@ class Byte_Message(Message):
 
 	@classmethod
 	def peel_from_buffer(cls, read_buffer):
-		""" Select the relevant part of a NetworkMessenger's read buffer as a complete message bytearray.
+		""" Select the relevant part of a Messenger's read buffer as a complete message bytearray.
 		In the Byte_Message class the determination of message completeness is determined by the number
 		of bytes to read from the buffer, determined by the first byte of the message."
 		Returns a tuple (Message, bytes_read) """
@@ -48,7 +48,7 @@ class Byte_Message(Message):
 
 
 	def encoded(self):
-		"""Called from network_messenger, prepends the byte length and class code to the return value of
+		"""Called from Messenger, prepends the byte length and class code to the return value of
 		this class' encode() function. Do not extend this function. Use the encode() function in your subclass."""
 		encoded_data = self.encode()
 		data_len = len(encoded_data)

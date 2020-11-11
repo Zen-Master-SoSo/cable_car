@@ -1,18 +1,18 @@
 """Provides:
-1. the NetworkMessenger class which sends and receives encoded Message objects
+1. the Messenger class which sends and receives encoded Message objects
 2. the Message class, an abstract framework for encoding/decoding messages for transfer """
 
 import logging, socket
 from select import select
 
 
-class NetworkMessenger:
+class Messenger:
 	"""Sends and receives encoded Message objects across the network."""
 
 	buffer_size				= 1024
 
 	def __init__(self, sock, message_class):
-		"""Instantiate a NetworkMessenger which communicates over the given socket.
+		"""Instantiate a Messenger which communicates over the given socket.
 		Pass an opened TCP socket to communicate over, and the class definition (not instance) of
 		the Message class to use to encode and decode messages for transfer."""
 		self.__sock = sock
@@ -30,7 +30,7 @@ class NetworkMessenger:
 		self.closed = True
 
 
-	def xfer_comms(self):
+	def xfer(self):
 		"""Do read/write operations.
 		Call this function regularly to send/receive encoded/decoded Message class objects. """
 
@@ -175,11 +175,11 @@ if __name__ == '__main__':
 
 
 	def _test_comms(sock):
-		msgr = NetworkMessenger(sock, globals()[options.message_class])
+		msgr = Messenger(sock, globals()[options.message_class])
 		msgr.id_sent = False
 		msgr.id_received = False
 		while _test_enable:
-			msgr.xfer_comms()
+			msgr.xfer()
 			msg = msgr.get()
 			if msg is not None:
 				assert(isinstance(msg, Message))

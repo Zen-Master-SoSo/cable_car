@@ -4,7 +4,7 @@ but could also be used for other purposes, such as an undo/redo facility."""
 import sys, logging, json
 from socket import gethostname
 from getpass import getuser
-from cable_car.network_messenger import Message
+from cable_car.messenger import Message
 
 
 class JSON_Message(Message):
@@ -20,7 +20,7 @@ class JSON_Message(Message):
 
 	@classmethod
 	def peel_from_buffer(cls, read_buffer):
-		""" Select the relevant part of a NetworkMessenger's read buffer as a complete message bytearray.
+		""" Select the relevant part of a Messenger's read buffer as a complete message bytearray.
 		In the JSON_Message class the determination of message completeness is the presence of a carriage
 		return message terminator in the buffer.
 		Returns a tuple (Message, bytes_read) """
