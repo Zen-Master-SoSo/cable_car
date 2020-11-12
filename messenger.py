@@ -1,25 +1,36 @@
-""" Provides the Messenger class which sends and receives encoded Message objects """
+""" Provides the Messenger class which sends and receives encoded Message objects
+Message transport selection is up to you!
+You must import Message from one of the cable_car message modules, i.e.:
 
-import logging, socket
+	from cable_car.json_messages import *
+	from cable_car.byte_messages import *
+
+"""
+
+import logging, socket, importlib
 from select import select
 
 
+
 class Messenger:
-	"""Sends and receives encoded Message objects across the network.
-	In order to use this class you must also import a Message class from one of the available
-	options. Presently, the only two available are "json_messages" and "byte_messages". I.e.:
+	""" Sends and receives encoded Message objects across the network.
+	See messenger module for notes on transport options. """
 
-		from cable_car.json_messages import Message
-
-	"""
-
+	transport		= "json"
 	buffer_size		= 1024
 	instance_count	= 0
 
-	def __init__(self, sock):
+	def __init__(self, sock, transport="json"):
 		"""Instantiate a Messenger which communicates over the given socket.
-		Pass an opened TCP socket to communicate with."""
+		Pass an opened TCP socket to communicate with, and the selected Message transport class definition."""
 		self.__sock = sock
+		if transport is not None:
+			self.transport = transport
+		if "Message" in dir():
+			self.__message = Message
+		else:
+			messages = importlib.import_module("cable_car.%s_messages" % self.transport)
+			self.__message = getattr(messages, "Message")
 		self.__sock.setblocking(0)
 		self.local_ip = sock.getsockname()[0]
 		self.remote_ip = sock.getpeername()[0]
@@ -89,7 +100,7 @@ class Messenger:
 
 	def get(self):
 		"""Returns a Message object if there is data available, otherwise returns None """
-		message, byte_len = Message.peel_from_buffer(self.__read_buffer)
+		message, byte_len = self.__message.peel_from_buffer(self.__read_buffer)
 		if byte_len:
 			self.__read_buffer = self.__read_buffer[byte_len + 1:]
 			return message
@@ -109,21 +120,23 @@ if __name__ == '__main__':
 	p = optparse.OptionParser()
 	p.add_option('--loopback', '-l', action='store_true')
 	p.add_option('--verbose', '-v', action='store_true')
-	p.add_option('--transport', type='string', default='JSON')
+	p.add_option('--transport', type='string', default='json')
 	options, arguments = p.parse_args()
-
-	if options.transport == "JSON":
-		from cable_car.json_messages import *
-	elif options.transport == "bytes":
-		from cable_car.byte_messages import *
-	else:
-		raise ValueError("%s is not a valid transport" % options.transport)
 
 	logging.basicConfig(
 		stream=sys.stdout,
 		level=logging.DEBUG if options.verbose else logging.ERROR,
 		format="%(relativeCreated)6d [%(filename)24s:%(lineno)3d] %(message)s"
 	)
+
+	# Import the selected message class:
+	try:
+		messages = importlib.import_module("cable_car.%s_messages" % options.transport)
+	except ImportError:
+		logging.error("%s is not a valid message transport" % options.transport)
+		sys.exit(1)
+	Message = getattr(messages, "Message")
+	Identify = getattr(messages, "Identify")
 
 
 	def _test_client():
@@ -168,14 +181,13 @@ if __name__ == '__main__':
 
 
 	def _test_comms(sock):
-		msgr = Messenger(sock)
+		msgr = Messenger(sock, options.transport)
 		msgr.id_sent = False
 		msgr.id_received = False
 		while _test_enable:
 			msgr.xfer()
 			msg = msgr.get()
 			if msg is not None:
-				assert(isinstance(msg, Message))
 				if(isinstance(msg, Identify)):
 					msgr.id_received = True
 			if msgr.id_sent:

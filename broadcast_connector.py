@@ -24,12 +24,6 @@ class BroadcastConnector:
 	on_connect_function		= None		# Function to call when a connection is made.
 
 
-	def __init__(self, udp_port = 8222, tcp_port = 8223):
-		"""Determine my ip address and create locks"""
-		self.udp_port = udp_port
-		self.tcp_port = tcp_port
-
-
 	def connect(self):
 		"""Blocking function which starts broadcast/listen and waits for all threads to exit"""
 		self._make_connections()
