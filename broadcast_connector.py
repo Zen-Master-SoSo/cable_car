@@ -24,19 +24,24 @@ class BroadcastConnector:
 	on_connect_function		= None		# Function to call when a connection is made.
 
 
+	@classmethod
+	def get_my_ip(cls):
+		sock = socket(AF_INET, SOCK_DGRAM)
+		sock.connect(('8.8.8.8', 7))
+		return sock.getsockname()[0]
+
+
 	def connect(self):
 		"""Blocking function which starts broadcast/listen and waits for all threads to exit"""
-		self._make_connections()
+		self._start_connector_threads()
 		# Wait for threads to exit:
 		self.join_threads()
 
 
-	def _make_connections(self):
+	def _start_connector_threads(self):
 		"""Non-blocking function which starts broadcast/listen and doesn't wait for threads to exit"""
 		self.broadcast_enable = True	# In case of re-start
-		sock = socket(AF_INET, SOCK_DGRAM)
-		sock.connect(('8.8.8.8', 7))
-		self.local_ip = sock.getsockname()[0]
+		self.local_ip = self.get_my_ip()
 		# Create a lock for appending to "sockets"
 		self.__socket_lock = threading.Lock()
 		# Create threads:
@@ -166,38 +171,4 @@ class BroadcastConnector:
 		Only valid after broadcasting has started, and really only valid after broadcasting is finished."""
 		return self.sockets.keys()
 
-
-
-if __name__ == '__main__':
-	import sys, os, optparse
-
-	p = optparse.OptionParser()
-	p.add_option('--loopback', '-l', action='store_true')
-	p.add_option('--verbose', '-v', action='store_true')
-	options, arguments = p.parse_args()
-
-	logging.basicConfig(
-		stream=sys.stdout,
-		level=logging.DEBUG if options.verbose else logging.ERROR,
-		format="%(relativeCreated)6d [%(filename)24s:%(lineno)3d] %(message)s"
-	)
-
-	def _show_connection_details(sock):
-		mine = sock.getsockname()
-		other = sock.getpeername()
-		logging.info("*** Connected to %s, port %s as %s, port %s " % (other[0], other[1], mine[0], mine[1]))
-		bc.stop_broadcasting()
-
-	bc = BroadcastConnector()
-	bc.verbose = True
-	bc.allow_loopback = options.loopback
-	bc.timeout = 2.0 if options.loopback else 15.0	# Allow time to start on remote machine
-	bc.on_connect_function = _show_connection_details
-	bc.connect()
-
-	logging.info("Addresses:")
-	logging.info(bc.addresses())
-
-	print("OKAY")
-	sys.exit(0)
 
