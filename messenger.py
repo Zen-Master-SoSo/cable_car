@@ -24,13 +24,14 @@ class Messenger:
 		"""Instantiate a Messenger which communicates over the given socket.
 		Pass an opened TCP socket to communicate with, and the selected Message transport class definition."""
 		self.__sock = sock
-		if transport is not None:
-			self.transport = transport
 		if "Message" in dir():
 			self.__message = Message
 		else:
-			messages = importlib.import_module("cable_car.%s_messages" % self.transport)
-			self.__message = getattr(messages, "Message")
+			if transport is not None:
+				self.transport = transport
+			module = importlib.import_module("cable_car.%s_messages" % self.transport)
+			self.__message = getattr(module, "Message")
+		self.__message.register_messages()
 		self.__sock.setblocking(0)
 		self.local_ip = sock.getsockname()[0]
 		self.remote_ip = sock.getpeername()[0]

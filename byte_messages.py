@@ -32,6 +32,23 @@ class Message:
 
 
 	@classmethod
+	def register_messages(cls):
+		"""
+		Registers all class definitions classes which subclass Message in the current scope.
+		"""
+		for subclass in Message.__subclasses__():
+			Message.class_defs[subclass.__name__] = subclass
+
+
+	@classmethod
+	def is_registered(cls, subclass):
+		"""
+		Registers all class definitions classes which subclass Message in the current scope.
+		"""
+		return subclass in cls.class_defs
+
+
+	@classmethod
 	def register(cls):
 		"""Registers a subclass of Message so that instances may be constructed by the Message class."""
 		cls.class_defs[cls.code] = cls

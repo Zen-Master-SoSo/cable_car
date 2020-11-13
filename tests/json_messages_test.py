@@ -1,8 +1,15 @@
 import pytest
 from cable_car.json_messages import *
 
-def test_classes_registered():
+class DummyMessage(Message):
 	pass
+
+def test_class_registration():
+	Message.register_messages()
+	assert Message.is_registered("Identify")
+	assert Message.is_registered("Join")
+	assert Message.is_registered("Quit")
+	assert Message.is_registered("DummyMessage")
 
 def test_class_encode_decode():
 	msg = Join()
