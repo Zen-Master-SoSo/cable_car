@@ -56,7 +56,7 @@ class Message:
 		if pos > -1:
 			try:
 				msg_data = read_buffer[:pos].decode('utf-8')
-				logging.debug("Decoding Message: " + msg_data)
+				logging.debug("Decoding message: " + msg_data)
 				payload = json.loads(msg_data)
 			except Exception as e:
 				logging.error(e)
@@ -75,7 +75,9 @@ class Message:
 		"""
 		JSON-encode this message for sending over a network and such.
 		"""
-		return bytearray(json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':')).encode() + self.terminator)
+		msg = json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':'))
+		logging.debug("Encoded message: " + msg)
+		return bytearray(msg.encode() + self.terminator)
 
 
 	def __str__(self):
