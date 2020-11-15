@@ -85,24 +85,24 @@ class Message:
 
 
 
-class Identify(Message):
+class MsgIdentify(Message):
 	def __init__(self, username=None, hostname=None):
 		self.username = username or getuser()
 		self.hostname = hostname or gethostname()
 
 
 
-class Join(Message):
+class MsgJoin(Message):
 	pass
 
 
 
-class Retry(Message):
+class MsgRetry(Message):
 	pass
 
 
 
-class Quit(Message):
+class MsgQuit(Message):
 	pass
 
 
@@ -116,5 +116,5 @@ if __name__ == '__main__':
 	)
 
 	Message.register_messages()
-	logging.debug(Message.is_registered("Join"))
+	logging.debug(Message.is_registered("MsgJoin"))
 

@@ -25,7 +25,7 @@ class Message:
 
 	Each subclass must define a "decode_data" function which uses the data passed to it
 	from the "peel_from_buffer" method to populate attributes of the subclass.
-	For an example, see the "Identify" class defined in this module.
+	For an example, see the "MsgIdentify" class defined in this module.
 	"""
 
 	class_defs = {} # dictionary of <code>: <class definition>
@@ -98,7 +98,7 @@ class Message:
 
 
 
-class Identify(Message):
+class MsgIdentify(Message):
 	code = 0x1
 	def __init__(self, username=None, hostname=None):
 		self.username = username or getuser()
@@ -115,26 +115,27 @@ class Identify(Message):
 		return ("%s@%s" % (self.username, self.hostname)).encode('ASCII')
 
 
-class Join(Message):
+
+class MsgJoin(Message):
 	code = 0x2
 	pass
 
 
 
-class Retry(Message):
+class MsgRetry(Message):
 	code = 0x3
 	pass
 
 
 
-class Quit(Message):
+class MsgQuit(Message):
 	code = 0x4
 	pass
 
 
 
-Identify.register()
-Join.register()
-Retry.register()
-Quit.register()
+MsgIdentify.register()
+MsgJoin.register()
+MsgRetry.register()
+MsgQuit.register()
 

@@ -137,7 +137,7 @@ if __name__ == '__main__':
 		logging.error("%s is not a valid message transport" % options.transport)
 		sys.exit(1)
 	Message = getattr(messages, "Message")
-	Identify = getattr(messages, "Identify")
+	MsgIdentify = getattr(messages, "MsgIdentify")
 
 
 	def _test_client():
@@ -189,13 +189,13 @@ if __name__ == '__main__':
 			msgr.xfer()
 			msg = msgr.get()
 			if msg is not None:
-				if(isinstance(msg, Identify)):
+				if(isinstance(msg, MsgIdentify)):
 					msgr.id_received = True
 			if msgr.id_sent:
 				if msgr.id_received:
 					return
 			else:
-				msgr.send(Identify())
+				msgr.send(MsgIdentify())
 				msgr.id_sent = True
 
 
