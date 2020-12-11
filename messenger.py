@@ -78,6 +78,8 @@ class Messenger:
 				pass
 			except BrokenPipeError:
 				self.closed = True
+			except ConnectionResetError:
+				self.closed = True
 			except IOError as e:
 				logging.error(e)
 				self.close()
