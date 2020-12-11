@@ -1,11 +1,16 @@
-""" Provides the BroadcastConnector connector class """
+"""
+Provides the BroadcastConnector connector class.
+"""
 import threading, time, logging
 from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR
 
 
 class BroadcastConnector:
-	""" Uses UDP broadcast to announce availability of a service, makes a TCP connection to any other
-	machines running the same type of BroadcastConnector, and makes the connected socket(s) available. """
+	"""
+	Uses UDP broadcast to announce availability of a service, makes a TCP
+	connection to any other machines running the same type of BroadcastConnector,
+	and makes the connected socket(s) available.
+	"""
 
 	udp_port				= 8222
 	tcp_port				= 8223
@@ -32,14 +37,19 @@ class BroadcastConnector:
 
 
 	def connect(self):
-		"""Blocking function which starts broadcast/listen and waits for all threads to exit"""
+		"""
+		Blocking function which starts broadcast/listen and waits for threads to exit.
+		"""
 		self._start_connector_threads()
 		# Wait for threads to exit:
 		self.join_threads()
 
 
 	def _start_connector_threads(self):
-		"""Non-blocking function which starts broadcast/listen and doesn't wait for threads to exit"""
+		"""
+		Non-blocking function which starts broadcast/listen and doesn't wait for
+		threads to exit.
+		"""
 		self.broadcast_enable = True	# In case of re-start
 		self.local_ip = self.get_my_ip()
 		# Create a lock for appending to "sockets"
@@ -59,7 +69,9 @@ class BroadcastConnector:
 
 
 	def join_threads(self):
-		"""Wait for all threads to exit normally"""
+		"""
+		Wait for all threads to exit normally.
+		"""
 		try:
 			self.__udp_broadcast_thread.join()
 			self.__udp_listen_thread.join()
@@ -71,11 +83,17 @@ class BroadcastConnector:
 
 
 	def stop_broadcasting(self):
-		"""Stop both broadcasting and listening by setting the \"enable\" flag to False."""
+		"""
+		Stop both broadcasting and listening by setting the "broadcast_enable" flag False.
+		"""
 		self.broadcast_enable = False
 
 
 	def _timeout(self):
+		"""
+		Optional timeout function. Enable by setting the "timeout" attribute of this
+		class to any value other than zero.
+		"""
 		while self.broadcast_enable:
 			if time.time() >= self._quitting_time:
 				logging.debug("timed out")
@@ -85,8 +103,10 @@ class BroadcastConnector:
 
 
 	def __udp_broadcast(self):
-		"""This thread sends a UDP packet to the broadcast address/port on a regular interval
-		as long as \"self.broadcast_enable\" is TRUE"""
+		"""
+		This thread sends a UDP packet to the broadcast address/port on a regular
+		interval as long as "self.broadcast_enable" is True.
+		"""
 		logging.debug("%s sending broadcast messages from %s, port %s" % (threading.current_thread().name, self.local_ip, self.udp_port))
 		broadcast_socket = socket(AF_INET, SOCK_DGRAM)
 		broadcast_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
@@ -100,15 +120,24 @@ class BroadcastConnector:
 
 
 	def __udp_listen(self):
-		"""This thread listens for connections from other computers doing the same broadcasting.
-		When a packet is received, a tcp connection is made with the host which broadcasted.
-		When a connection is made, the socket is appended to the \"sockets\" dictionary.
-		There is only one listen thread."""
+		"""
+		This thread listens for connections from other computers doing the same
+		broadcasting. When a packet is received, a tcp connection is made with the host
+		which broadcasted. When a connection is made, the socket is appended to the
+		"sockets" dictionary.
+
+		There is only one listen thread.
+		"""
 		logging.debug("%s listening for UDP broadcasts on port %s" % (threading.current_thread().name, self.udp_port))
-		listen_socket = socket(AF_INET, SOCK_DGRAM)
-		listen_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
-		listen_socket.bind(("", self.udp_port))
-		listen_socket.setblocking(0)
+		try:
+			listen_socket = socket(AF_INET, SOCK_DGRAM)
+			listen_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+			listen_socket.bind(("", self.udp_port))
+			listen_socket.setblocking(0)
+		except Exception as e:
+			self.broadcast_enable = False
+			logging.error(e)
+			return
 		while self.broadcast_enable:
 			try:
 				data, address_pair = listen_socket.recvfrom(1024)
@@ -141,12 +170,21 @@ class BroadcastConnector:
 
 
 	def __tcp_listen(self):
+		"""
+		This thread listens for TCP connections and adds the connected socket to
+		"sockets" list.
+		"""
 		logging.debug("%s listening for TCP connections on port %s" % (threading.current_thread().name, self.tcp_port))
-		listen_socket = socket(AF_INET, SOCK_STREAM)
-		listen_socket.setblocking(0)
-		listen_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-		listen_socket.bind(("", self.tcp_port))
-		listen_socket.listen(5)
+		try:
+			listen_socket = socket(AF_INET, SOCK_STREAM)
+			listen_socket.setblocking(0)
+			listen_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+			listen_socket.bind(("", self.tcp_port))
+			listen_socket.listen(5)
+		except Exception as e:
+			self.broadcast_enable = False
+			logging.error(e)
+			return
 		while self.broadcast_enable:
 			try:
 				sock, address_pair = listen_socket.accept()
@@ -167,8 +205,11 @@ class BroadcastConnector:
 
 
 	def addresses(self):
-		"""Returns a list of ip addresses of computers connected (as either server or client).
-		Only valid after broadcasting has started, and really only valid after broadcasting is finished."""
+		"""
+		Returns a list of ip addresses of computers connected (as either server or
+		client). Only valid after broadcasting has started, and really only valid after
+		broadcasting is finished.
+		"""
 		return self.sockets.keys()
 
 

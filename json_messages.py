@@ -114,7 +114,9 @@ if __name__ == '__main__':
 		level=logging.DEBUG,
 		format="[%(filename)24s:%(lineno)3d] %(message)s"
 	)
-
 	Message.register_messages()
-	logging.debug(Message.is_registered("MsgJoin"))
+	assert Message.is_registered("MsgIdentify")
+	assert Message.is_registered("MsgJoin")
+	assert Message.is_registered("MsgRetry")
+	assert Message.is_registered("MsgQuit")
 

@@ -1,5 +1,7 @@
-""" Provides classes which are primarily used to pass JSON-encoded messages across a network,
-but could also be used for other purposes, such as an undo/redo facility. """
+"""
+Provides classes which are primarily used to pass JSON-encoded messages across a network,
+but could also be used for other purposes, such as an undo/redo facility.
+"""
 
 import sys, logging, json
 from socket import gethostname
@@ -7,7 +9,8 @@ from getpass import getuser
 
 
 class Message:
-	"""A class which encodes and decodes itself as a series of compact bytes.
+	"""
+	A class which encodes and decodes itself as a series of compact bytes.
 	The format of each message is:
 		Byte
 		--------    ----------------------------------------------------------------------
@@ -34,7 +37,7 @@ class Message:
 	@classmethod
 	def register_messages(cls):
 		"""
-		Registers all class definitions classes which subclass Message in the current scope.
+		Registers all classes in the current scope which subclass Message.
 		"""
 		for subclass in Message.__subclasses__():
 			Message.class_defs[subclass.__name__] = subclass
@@ -43,23 +46,30 @@ class Message:
 	@classmethod
 	def is_registered(cls, subclass):
 		"""
-		Registers all class definitions classes which subclass Message in the current scope.
+		Returns boolean True if the given "subclass" has been registered.
 		"""
 		return subclass in cls.class_defs
 
 
 	@classmethod
 	def register(cls):
-		"""Registers a subclass of Message so that instances may be constructed by the Message class."""
+		"""
+		Registers a subclass of Message so that instances may be constructed by the
+		Message class.
+		"""
 		cls.class_defs[cls.code] = cls
 
 
 	@classmethod
 	def peel_from_buffer(cls, read_buffer):
-		""" Select the relevant part of a Messenger's read buffer as a complete message bytearray.
-		In the Message class defined in this moduel, message completeness is  determined by the
-		number of bytes to read from the buffer, determined by the first byte of the message."
-		Returns a tuple (Message, bytes_read) """
+		"""
+		Select the relevant part of a Messenger's read buffer as a complete message
+		bytearray. In the Message class defined in this moduel, message completeness is
+		determined by the number of bytes to read from the buffer as indicated by the
+		first byte of the message.
+
+		Returns a tuple (Message, bytes_read).
+		"""
 		if(len(read_buffer) and len(read_buffer) >= read_buffer[0]):
 			logging.debug("Received %d-byte message" % read_buffer[0])
 			if read_buffer[1] in cls.class_defs:
@@ -73,9 +83,11 @@ class Message:
 
 
 	def encoded(self):
-		"""Called from Messenger, prepends the byte length and class code to the return value of
-		this class' "encode" function. Do not extend this function. Extend the "encode" function in
-		your subclass instead."""
+		"""
+		Called from Messenger, prepends the byte length and class code to the return
+		value of this class' "encode" function. Do not extend this function. Extend the
+		"encode" function in your subclass instead.
+		"""
 		encoded_data = self.encode()
 		data_len = len(encoded_data)
 		logging.debug("Encoded %d-bytes of message data" % data_len)
@@ -84,12 +96,18 @@ class Message:
 
 
 	def encode(self):
-		"""Default function which returns an empty bytearray. This is the function to extend in your subclass."""
+		"""
+		Default function which returns an empty bytearray. This is the function to
+		extend in your subclass.
+		"""
 		return bytearray()
 
 
 	def decode_data(self, msg_data):
-		"""Default function which does nothing. Extend in your subclass to populate class attributes."""
+		"""
+		Default function which does nothing. Extend in your subclass to populate class
+		attributes.
+		"""
 		pass
 
 
@@ -99,19 +117,25 @@ class Message:
 
 
 class MsgIdentify(Message):
+
 	code = 0x1
+
 	def __init__(self, username=None, hostname=None):
 		self.username = username or getuser()
 		self.hostname = hostname or gethostname()
 
 
 	def decode_data(self, msg_data):
-		"""Read username and hostname from message data."""
+		"""
+		Read username and hostname from message data.
+		"""
 		self.username, self.hostname = msg_data.decode().split("@")
 
 
 	def encode(self):
-		"""Encode username@hostname."""
+		"""
+		Encode username@hostname.
+		"""
 		return ("%s@%s" % (self.username, self.hostname)).encode('ASCII')
 
 
@@ -134,8 +158,16 @@ class MsgQuit(Message):
 
 
 
-MsgIdentify.register()
-MsgJoin.register()
-MsgRetry.register()
-MsgQuit.register()
+if __name__ == '__main__':
+	import logging
+	logging.basicConfig(
+		stream=sys.stdout,
+		level=logging.DEBUG,
+		format="[%(filename)24s:%(lineno)3d] %(message)s"
+	)
+	Message.register_messages()
+	assert Message.is_registered("MsgIdentify")
+	assert Message.is_registered("MsgJoin")
+	assert Message.is_registered("MsgRetry")
+	assert Message.is_registered("MsgQuit")
 
