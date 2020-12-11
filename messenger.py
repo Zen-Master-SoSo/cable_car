@@ -44,9 +44,10 @@ class Messenger:
 
 
 	def close(self):
-		logging.debug("Messenger %d saying SHUT_RDWR" % self._instance_id)
-		self.__sock.shutdown(socket.SHUT_RDWR)
-		self.closed = True
+		if not self.closed:
+			logging.debug("Messenger %d saying SHUT_RDWR" % self._instance_id)
+			self.__sock.shutdown(socket.SHUT_RDWR)
+			self.closed = True
 
 
 	def xfer(self):
