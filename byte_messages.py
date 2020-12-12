@@ -40,15 +40,15 @@ class Message:
 		Registers all classes in the current scope which subclass Message.
 		"""
 		for subclass in Message.__subclasses__():
-			Message.class_defs[subclass.__name__] = subclass
+			Message.class_defs[subclass.code] = subclass
 
 
 	@classmethod
-	def is_registered(cls, subclass):
+	def is_registered(cls, code):
 		"""
 		Returns boolean True if the given "subclass" has been registered.
 		"""
-		return subclass in cls.class_defs
+		return code in cls.class_defs
 
 
 	@classmethod

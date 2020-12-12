@@ -1,10 +1,10 @@
-""" Provides the Messenger class which sends and receives encoded Message objects
-Message transport selection is up to you!
-You must import Message from one of the cable_car message modules, i.e.:
-
-	from cable_car.json_messages import *
-	from cable_car.byte_messages import *
-
+"""
+Provides the Messenger class which sends and receives encoded Message objects.
+You must pass the name of your selected "transport" to the constuctor. Currently, the
+Messenger supports two transports; "json" or "byte". The "json" transport is a lot
+easier to implement, but requires more network bandwidth and may be slow for very busy
+network games. In contrast, the "byte" transport is very lightweight, but requires that you
+write message encoding and decoding routines yourself.
 """
 
 import logging, socket, importlib

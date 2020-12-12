@@ -63,8 +63,7 @@ class Message:
 			else:
 				if payload[0] in cls.class_defs:
 					msg = cls.class_defs[payload[0]]()
-					for key, value in payload[1].items():
-						setattr(msg, key, value)
+					msg.decode_attributes(payload[1])
 					return msg, pos
 				else:
 					raise KeyError("%s is not a registered Message class" % payload[0])
@@ -73,22 +72,60 @@ class Message:
 
 	def encoded(self):
 		"""
-		JSON-encode this message for sending over a network and such.
+		Returns this Message json-encodes for sending over a network.
+		DO NOT OVERRIDE THIS FUNCTION. Use "encoded_attributes" to customize how your Message is encoded.
 		"""
-		msg = json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':'))
+		msg = json.dumps([self.__class__.__name__, self.encoded_attributes()], separators=(',', ':'))
 		logging.debug("Encoded message: " + msg)
 		return bytearray(msg.encode() + self.terminator)
 
 
+	def encoded_attributes(self):
+		"""
+		Used when encoding a Message class with custom attributes to a json-encoded
+		message. The purpose of this function is to take more complex attributes and
+		convert them into built-in types which won't confuse the json encoder.
+
+		Returns a dict containing this Message's attributes simplified for encoding.
+
+		If your message uses complex types which json cannot encode, then implement
+		custom functions, both "encoded_attributes" and "decode_attributes".
+		"""
+		return self.__dict__
+
+
+	def __init__(self, **kwargs):
+		"""
+		Used both when constructing a Message class with custom attributes, and
+		basically ignored when instantiating a Message class while decoding.
+		"""
+		for varname, value in kwargs.items():
+			setattr(self, varname, value)
+
+
+	def decode_attributes(self, attributes):
+		"""
+		Used when going from a json-encoded message back to a Message class with custom
+		attributes. This is a default implementation which can work if all attributes
+		are built-in types. If your message uses complex types which json cannot
+		encode, then implement custom functions, both "encoded_attributes" and
+		"decode_attributes".
+		"""
+		for key, value in attributes.items():
+			setattr(self, key, value)
+
+
 	def __str__(self):
-		return json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':')).encode()
+		return json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':'))
 
 
 
 class MsgIdentify(Message):
-	def __init__(self, username=None, hostname=None):
-		self.username = username or getuser()
-		self.hostname = hostname or gethostname()
+
+	def __init__(self, **kwargs):
+		Message.__init__(self, **kwargs)
+		if not hasattr(self, "username"): self.username = getuser()
+		if not hasattr(self, "hostname"): self.hostname = gethostname()
 
 
 

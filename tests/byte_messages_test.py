@@ -2,20 +2,20 @@ import pytest
 from cable_car.byte_messages import *
 
 class DummyMessage(Message):
+	code = 0xFF
 	pass
 
 def test_class_registration():
 	Message.register_messages()
-	assert Message.is_registered("MsgIdentify")
-	assert Message.is_registered("MsgJoin")
-	assert Message.is_registered("MsgQuit")
-	assert Message.is_registered("DummyMessage")
+	assert Message.is_registered(MsgIdentify.code)
+	assert Message.is_registered(MsgJoin.code)
+	assert Message.is_registered(MsgQuit.code)
+	assert Message.is_registered(DummyMessage.code)
 
 def test_class_encode_decode():
 	msg = MsgJoin()
 	assert isinstance(msg, MsgJoin)
 	encoded_message = msg.encoded()
-
 	buff = encoded_message
 	msg, pos = Message.peel_from_buffer(buff)
 	assert isinstance(msg, MsgJoin)
