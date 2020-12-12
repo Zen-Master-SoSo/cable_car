@@ -50,6 +50,15 @@ class Messenger:
 			self.closed = True
 
 
+	def shutdown(self):
+		if self.closed: return
+		watchdog = 0
+		while len(self.__write_buffer) and watchdog < 100:
+			self.xfer()
+			watchdog += 1
+		self.close()
+
+
 	def xfer(self):
 		"""Do read/write operations.
 		Call this function regularly to send/receive encoded/decoded Message class objects. """
