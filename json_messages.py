@@ -116,7 +116,7 @@ class Message:
 
 
 	def __str__(self):
-		return json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':'))
+		return json.dumps([self.__class__.__name__, self.encoded_attributes()], separators=(',', ':'))
 
 
 
