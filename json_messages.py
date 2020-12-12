@@ -81,7 +81,7 @@ class Message:
 
 
 	def __str__(self):
-		return self.encoded()
+		return json.dumps([self.__class__.__name__, self.__dict__], separators=(',', ':')).encode()
 
 
 
