@@ -38,8 +38,8 @@ class Messenger:
 		self.__sock = sock
 		self.transport = transport
 		module = importlib.import_module("cable_car.%s_messages" % self.transport)
-		self.__message = getattr(module, "Message")
-		self.__message.register_messages()
+		Message = getattr(module, "Message")
+		Message.register_messages()
 		self.__sock.setblocking(0)
 		self.local_ip = sock.getsockname()[0]
 		self.remote_ip = sock.getpeername()[0]
@@ -121,7 +121,7 @@ class Messenger:
 
 	def get(self):
 		"""Returns a Message object if there is data available, otherwise returns None """
-		message, byte_len = self.__message.peel_from_buffer(self.__read_buffer)
+		message, byte_len = Message.peel_from_buffer(self.__read_buffer)
 		if byte_len:
 			self.__read_buffer = self.__read_buffer[byte_len + 1:]
 			return message
