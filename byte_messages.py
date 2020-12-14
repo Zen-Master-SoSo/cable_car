@@ -18,68 +18,85 @@ class Message:
 		   1        Single-digit class code, identifying the Message class to instantiate
 		2 .. len    (optional) Encoded data which is unique to the subclass
 		--------    ----------------------------------------------------------------------
-	Some requirements when creating subclasses:
 
-	The __init__ function of any subclass you create must be able to be called with no
-	arguments, as the "Message.peel_from_buffer" function creates an instance with no args
-	before converting the JSON into class attributes.
+	## Creating subclasses:
 
-	Each subclass must define an "encode" function which returns a bytearray.
+	You must allow the __init__ function of any subclass you create to be called
+	with no arguments, as the "peel_from_buffer" function will create an instance
+	without arguments before calling "decode" to convert the encoded data back into
+	class attributes.
 
-	Each subclass must define a "decode_data" function which uses the data passed to it
-	from the "peel_from_buffer" method to populate attributes of the subclass.
+	If you subclass Message, and the subclass has custom attributes, you need to
+	implement both "encode" and "decode" functions in that class. The "encode"
+	function must return a bytearray from the attributes of the subclass, (in
+	whatever format seems appropriate to you), while the "decode" function must
+	take the encoded bytearray and restore the class attributes back from the given
+	bytes.
+
 	For an example, see the "MsgIdentify" class defined in this module.
+
 	"""
 
-	class_defs = {} # dictionary of <code>: <class definition>
+	registry = {} # dictionary of <code>: <class definition>
 
 
 	@classmethod
 	def register_messages(cls):
 		"""
-		Registers all classes in the current scope which subclass Message.
+		Register all classes which subclass Message in the current scope.
 		"""
 		for subclass in Message.__subclasses__():
-			Message.class_defs[subclass.code] = subclass
+			Message.registry[subclass.code] = subclass
 
 
 	@classmethod
 	def is_registered(cls, code):
 		"""
-		Returns boolean True if the given "subclass" has been registered.
+		Tests that a subclass is registered. (Used by unit tests.)
 		"""
-		return code in cls.class_defs
+		return code in cls.registry
 
 
 	@classmethod
 	def register(cls):
 		"""
-		Registers a subclass of Message so that instances may be constructed by the
-		Message class.
+		Registers a class, allowing it to be available in "peel_from_buffer".
 		"""
-		cls.class_defs[cls.code] = cls
+		cls.registry[cls.code] = cls
 
 
 	@classmethod
 	def peel_from_buffer(cls, read_buffer):
 		"""
-		Select the relevant part of a Messenger's read buffer as a complete message
-		bytearray. In the Message class defined in this moduel, message completeness is
-		determined by the number of bytes to read from the buffer as indicated by the
-		first byte of the message.
+		Selects a portion of a Messenger's read buffer as a message.
+		The length of the message is indicated by the first byte read.
 
 		Returns a tuple (Message, bytes_read).
 		"""
 		if(len(read_buffer) and len(read_buffer) >= read_buffer[0]):
 			logging.debug("Received %d-byte message" % read_buffer[0])
-			if read_buffer[1] in cls.class_defs:
-				msg = cls.class_defs[read_buffer[1]]()
+			if read_buffer[1] in cls.registry:
+				message = cls.registry[read_buffer[1]]()
 				if read_buffer[0] > 2:
-					msg.decode_data(read_buffer[2:])
-				return msg, read_buffer[0]
+					message.decode(read_buffer[2:])
+				return message, read_buffer[0]
 			else:
-				raise KeyError("%d is not a registered Message code" % read_buffer[1])
+				raise Exception("%d is not a registered Message code" % read_buffer[1])
 		return None, 0
+
+
+	def __init__(self, **kwargs):
+		"""
+		Used both when constructing a Message class with custom attributes, and
+		basically ignored when instantiating a Message class while decoding.
+
+		Do not change the function signature. Any subclass of Message must accept no
+		arguments, as the "Message.peel_from_buffer" function creates an instance with
+		no arguments before setting class attributes from encoded data using the
+		"decode" function.
+		"""
+		for varname, value in kwargs.items():
+			setattr(self, varname, value)
 
 
 	def encoded(self):
@@ -97,13 +114,14 @@ class Message:
 
 	def encode(self):
 		"""
-		Default function which returns an empty bytearray. This is the function to
-		extend in your subclass.
+		Returns this Message class' attributes as a bytearray.
+		If your message requires complex types which json cannot encode, implement this
+		function as well as "decode".
 		"""
 		return bytearray()
 
 
-	def decode_data(self, msg_data):
+	def decode(self, msg_data):
 		"""
 		Default function which does nothing. Extend in your subclass to populate class
 		attributes.
@@ -125,18 +143,18 @@ class MsgIdentify(Message):
 		self.hostname = hostname or gethostname()
 
 
-	def decode_data(self, msg_data):
-		"""
-		Read username and hostname from message data.
-		"""
-		self.username, self.hostname = msg_data.decode().split("@")
-
-
 	def encode(self):
 		"""
 		Encode username@hostname.
 		"""
 		return ("%s@%s" % (self.username, self.hostname)).encode('ASCII')
+
+
+	def decode(self, msg_data):
+		"""
+		Read username and hostname from message data.
+		"""
+		self.username, self.hostname = msg_data.decode().split("@")
 
 
 

@@ -1,4 +1,3 @@
-import pytest
 from cable_car.byte_messages import *
 
 class DummyMessage(Message):

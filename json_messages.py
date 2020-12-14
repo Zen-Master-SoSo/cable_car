@@ -10,74 +10,102 @@ from getpass import getuser
 
 class Message:
 	"""
-	A class which encodes and decodes itself as JSON.
-	Note: the __init__ function of any subclass you create must be able to be called with no
-	arguments, as the "Message.peel_from_buffer" function creates an instance with no args
-	before converting the JSON into class attributes.
+	A class which encodes JSON messages for network transport and other uses.
+	.
+
+	## Creating subclasses:
+
+	You must allow the __init__ function of any subclass you create to be called
+	with no arguments, as the "peel_from_buffer" function will create an instance
+	without arguments before calling "decode" to convert the encoded data back into
+	class attributes.
+
+	If you subclass Message, and the subclass has custom attributes, you need to
+	implement both "encode" and "decode" functions in that class. The "encode"
+	function must return a bytearray from the attributes of the subclass, (in
+	whatever format seems appropriate to you), while the "decode" function must
+	take the encoded bytearray and restore the class attributes back from the given
+	bytes.
+
 	"""
 
 	terminator = b"\n"
-	class_defs = {}	# dictionary of <class name>: <class definition>
+	registry = {}	# dictionary of <class name>: <class definition>
 
 	@classmethod
 	def register_messages(cls):
 		"""
-		Registers all class definitions classes which subclass Message in the current scope.
+		Register all classes which subclass Message in the current scope.
 		"""
 		for subclass in Message.__subclasses__():
-			Message.class_defs[subclass.__name__] = subclass
+			Message.registry[subclass.__name__] = subclass
 
 
 	@classmethod
 	def is_registered(cls, subclass):
 		"""
-		Registers all class definitions classes which subclass Message in the current scope.
+		Tests that a subclass is registered. (Used by unit tests.)
 		"""
-		return subclass in cls.class_defs
+		return subclass in cls.registry
 
 
 	@classmethod
 	def register(cls):
 		"""
-		Registers class definitions for the "Message.peel_from_buffer" function.
+		Registers a class, allowing it to be available in "peel_from_buffer".
 		"""
-		cls.class_defs[cls.__name__] = cls
+		cls.registry[cls.__name__] = cls
 
 
 	@classmethod
 	def peel_from_buffer(cls, read_buffer):
 		"""
-		Select the relevant part of a Messenger's read buffer as a complete message bytearray.
-		In the Message class in this module, the determination of message completeness is the
-		presence of a carriage return message terminator in the buffer.
+		Selects a portion of a Messenger's read buffer as a message.
+		The length of the message is determined by the position of the first carriage
+		return in the buffer.
+
 		Returns a tuple (Message, bytes_read).
 		"""
 		pos = read_buffer.find(cls.terminator)
 		if pos > -1:
 			try:
-				msg_data = read_buffer[:pos].decode('utf-8')
-				logging.debug("Decoding message: " + msg_data)
-				payload = json.loads(msg_data)
+				message_data = read_buffer[:pos].decode('utf-8')
+				logging.debug("Decoding message: " + message_data)
+				payload = json.loads(message_data)
 			except Exception as e:
 				logging.error(e)
 			else:
-				if payload[0] in cls.class_defs:
-					msg = cls.class_defs[payload[0]]()
-					msg.decode_attributes(payload[1])
-					return msg, pos
+				if payload[0] in cls.registry:
+					message = cls.registry[payload[0]]()
+					message.decode_attributes(payload[1])
+					return message, pos
 				else:
 					raise KeyError("%s is not a registered Message class" % payload[0])
 		return None, 0
 
 
+	def __init__(self, **kwargs):
+		"""
+		Used both when constructing a Message class with custom attributes, and
+		basically ignored when instantiating a Message class while decoding.
+
+		Do not change the function signature. Any subclass of Message must accept no
+		arguments, as the "Message.peel_from_buffer" function creates an instance with
+		no arguments before setting class attributes from encoded data using the
+		"decode_attributes" function.
+		"""
+		for varname, value in kwargs.items():
+			setattr(self, varname, value)
+
+
 	def encoded(self):
 		"""
-		Returns this Message json-encodes for sending over a network.
+		Returns a json-encoded representation of this Message.
 		DO NOT OVERRIDE THIS FUNCTION. Use "encoded_attributes" to customize how your Message is encoded.
 		"""
-		msg = json.dumps([self.__class__.__name__, self.encoded_attributes()], separators=(',', ':'))
-		logging.debug("Encoded message: " + msg)
-		return bytearray(msg.encode() + self.terminator)
+		message = json.dumps([self.__class__.__name__, self.encoded_attributes()], separators=(',', ':'))
+		logging.debug("Encoded message: " + message)
+		return bytearray(message.encode() + self.terminator)
 
 
 	def encoded_attributes(self):
@@ -88,19 +116,10 @@ class Message:
 
 		Returns a dict containing this Message's attributes simplified for encoding.
 
-		If your message uses complex types which json cannot encode, then implement
-		custom functions, both "encoded_attributes" and "decode_attributes".
+		If your message requires complex types which json cannot encode, implement this
+		function as well as "decode_attributes".
 		"""
 		return self.__dict__
-
-
-	def __init__(self, **kwargs):
-		"""
-		Used both when constructing a Message class with custom attributes, and
-		basically ignored when instantiating a Message class while decoding.
-		"""
-		for varname, value in kwargs.items():
-			setattr(self, varname, value)
 
 
 	def decode_attributes(self, attributes):

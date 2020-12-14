@@ -1,4 +1,3 @@
-import pytest
 from cable_car.json_messages import *
 
 class DummyMessage(Message):

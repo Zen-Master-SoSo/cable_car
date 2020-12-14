@@ -1,10 +1,20 @@
 """
 Provides the Messenger class which sends and receives encoded Message objects.
-You must pass the name of your selected "transport" to the constuctor. Currently, the
-Messenger supports two transports; "json" or "byte". The "json" transport is a lot
-easier to implement, but requires more network bandwidth and may be slow for very busy
-network games. In contrast, the "byte" transport is very lightweight, but requires that you
-write message encoding and decoding routines yourself.
+.
+
+Currently, the Messenger supports two transports; "json" or "byte". The "json"
+transport is a lot easier to implement, but requires more network bandwidth and
+may be slow for very busy network games. In contrast, the "byte" transport is
+very lightweight, but requires that you write message encoding and decoding
+routines for every message class which will pass information.
+
+"json" messages may still require custom encoding and decoding if your messages
+use attributes which are not python built-in types. For example, if you create
+a json message class which uses a custom class as an attribute, you need to
+convert the custom class into python built-in types when encoding, and recreate
+the custom class from the python built-in types when reconstructing the message
+on the receiving end.
+
 """
 
 import logging, socket, importlib
@@ -16,21 +26,19 @@ class Messenger:
 	""" Sends and receives encoded Message objects across the network.
 	See messenger module for notes on transport options. """
 
-	transport		= "json"
 	buffer_size		= 1024
 	instance_count	= 0
 
 	def __init__(self, sock, transport="json"):
-		"""Instantiate a Messenger which communicates over the given socket.
-		Pass an opened TCP socket to communicate with, and the selected Message transport class definition."""
+		"""
+		Instantiate a Messenger which communicates over the given socket.
+		sock - an opened TCP socket to communicate with.
+		transport - a string identifying the transport class to use.
+		"""
 		self.__sock = sock
-		if "Message" in dir():
-			self.__message = Message
-		else:
-			if transport is not None:
-				self.transport = transport
-			module = importlib.import_module("cable_car.%s_messages" % self.transport)
-			self.__message = getattr(module, "Message")
+		self.transport = transport
+		module = importlib.import_module("cable_car.%s_messages" % self.transport)
+		self.__message = getattr(module, "Message")
 		self.__message.register_messages()
 		self.__sock.setblocking(0)
 		self.local_ip = sock.getsockname()[0]
