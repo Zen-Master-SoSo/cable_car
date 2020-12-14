@@ -12,19 +12,21 @@ class BroadcastConnector:
 	and makes the connected socket(s) available.
 	"""
 
-	udp_port				= 8222
-	tcp_port				= 8223
-	broadcast_interval		= 1
-	verbose					= False
+	udp_port				= 8222		# Port to broadcast on
+	tcp_port				= 8223		# Port to listen on
+	broadcast_interval		= 1.0		# Number of seconds between broadcasts
 	allow_loopback			= False		# Whether to accept connections from, or try to connect to, the same ip address
 	local_ip				= None		# Used especially to filter localhost when not "allow_loopback"
 	tcp_connect_timeout		= 2.0		# Used when making a connection to a server which has broadcasted
 	timeout					= 0.0		# Seconds to wait before quitting; 0.0 = no timeout
 	broadcast_enable		= False		# Flag which tells the threads to exit when it goes False
-	__udp_broadcast_thread	= None		# Thread which broadcasts on "udp_port"
-	__udp_listen_thread		= None		# Thread which listens for broadcast messages on "udp_port" and initiates tcp connections
-	__tcp_listen_thread		= None		# Thread which listens for tcp (SOCK_STREAM) connection requests
-	__timeout_thread		= None		# Thread which waits self.timeout seconds then flips self.broadcast_enable
+	__timeout_thread		= None		# Thread; waits self.timeout seconds then flips self.broadcast_enable
+	__udp_broadcast_thread	= None		# Thread; broadcasts on udp_port
+	__udp_listen_thread		= None		# Thread; listens for broadcast on udp_port connects on tcp_port
+	__tcp_listen_thread		= None		# Thread; listens for tcp connection requests on tcp_port
+	_udp_broadcast_exc		= None		# Exception which (may have) occured in __udp_broadcast_thread
+	_udp_listen_exc			= None		# Exception which (may have) occured in __udp_listen_thread
+	_tcp_listen_exc			= None		# Exception which (may have) occured in __tcp_listen_thread
 	sockets					= {}		# A dictionary of connected sockets [ip_address => socket]
 	on_connect_function		= None		# Function to call when a connection is made.
 
@@ -76,7 +78,7 @@ class BroadcastConnector:
 			self.__udp_broadcast_thread.join()
 			self.__udp_listen_thread.join()
 			self.__tcp_listen_thread.join()
-			if self.__timeout_thread:
+			if self.timeout:
 				self.__timeout_thread.join()
 		except KeyboardInterrupt:
 			self.broadcast_enable = False
@@ -91,8 +93,8 @@ class BroadcastConnector:
 
 	def _timeout(self):
 		"""
-		Optional timeout function. Enable by setting the "timeout" attribute of this
-		class to any value other than zero.
+		Optional timeout thread. Enable by setting the "timeout" attribute of this
+		class to any value other than zero before starting connector threads.
 		"""
 		while self.broadcast_enable:
 			if time.time() >= self._quitting_time:
@@ -108,8 +110,14 @@ class BroadcastConnector:
 		interval as long as "self.broadcast_enable" is True.
 		"""
 		logging.debug("%s sending broadcast messages from %s, port %s" % (threading.current_thread().name, self.local_ip, self.udp_port))
-		broadcast_socket = socket(AF_INET, SOCK_DGRAM)
-		broadcast_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+		try:
+			broadcast_socket = socket(AF_INET, SOCK_DGRAM)
+			broadcast_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+		except Exception as e:
+			logging.error(e)
+			self._udp_broadcast_exc = e
+			self.broadcast_enable = False
+			return
 		next_broadcast = time.time() + 0.1
 		while self.broadcast_enable:
 			time.sleep(0.25)
@@ -135,8 +143,9 @@ class BroadcastConnector:
 			listen_socket.bind(("", self.udp_port))
 			listen_socket.setblocking(0)
 		except Exception as e:
-			self.broadcast_enable = False
 			logging.error(e)
+			self._udp_listen_exc = e
+			self.broadcast_enable = False
 			return
 		while self.broadcast_enable:
 			try:
@@ -145,7 +154,9 @@ class BroadcastConnector:
 				continue
 			except Exception as e:
 				logging.error(e)
+				self._udp_listen_exc = e
 				self.broadcast_enable = False
+				return
 			else:
 				# logging.debug("%s received broadcast packet from %s, port %s" % (threading.current_thread().name, address_pair[0], address_pair[1]))
 				address = address_pair[0]
@@ -182,8 +193,9 @@ class BroadcastConnector:
 			listen_socket.bind(("", self.tcp_port))
 			listen_socket.listen(5)
 		except Exception as e:
-			self.broadcast_enable = False
 			logging.error(e)
+			self._tcp_listen_exc= e
+			self.broadcast_enable = False
 			return
 		while self.broadcast_enable:
 			try:
@@ -192,7 +204,9 @@ class BroadcastConnector:
 				pass
 			except Exception as e:
 				logging.error(e)
+				self._tcp_listen_exc= e
 				self.broadcast_enable = False
+				return
 			else:
 				logging.debug("%s accepted TCP connection from %s" % (threading.current_thread().name, address_pair[0]))
 				self.__socket_lock.acquire(1)
