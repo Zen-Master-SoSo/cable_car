@@ -10,12 +10,16 @@ class Loopback:
 	Base class of Loopback with timout support.
 	"""
 
-	tcp_port				= 8223		# Port to connect to
 	timeout					= 0.0		# Seconds to wait before quitting; 0.0 = no timeout
 	_connect_enable			= True
 	_timeout_thread			= None		# Thread; waits self.timeout seconds then flips self._connect_enable
+	_timed_out				= False
 	socket					= None		# Connected socket
 	on_connect_function		= None		# Function to call when a connection is made.
+
+
+	def __init__(self, tcp_port=8223):
+		self.tcp_port = tcp_port
 
 
 	def _start_timeout_thread(self):
@@ -32,6 +36,7 @@ class Loopback:
 		while self._connect_enable:
 			if time.time() >= quitting_time:
 				logging.debug("timed out")
+				self._timed_out = True
 				break
 			time.sleep(0.25)
 		self._connect_enable = False
@@ -50,18 +55,25 @@ class LoopbackClient(Loopback):
 		"""
 		Attempts to make a connection and waits for threads to exit.
 		"""
-		self._connect_enable = True
-		if self.timeout:
-			self._start_timeout_thread()
-		while self._connect_enable:
+		try:
 			self.socket = socket(AF_INET, SOCK_STREAM)
 			self.socket.settimeout(self.tcp_connect_timeout)
 			self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 			logging.debug("Client connecting")
+		except Exception as exception:
+			logging.error("Client error: (%s) %s" % (type(exception).__name__, exception))
+			return
+		if self.timeout:
+			self._start_timeout_thread()
+		self._connect_enable = True
+		while self._connect_enable:
 			try:
 				self.socket.connect(("127.0.0.1", self.tcp_port))
+			except ConnectionRefusedError:
+				pass
 			except Exception as exception:
-				logging.error("Client error: %s" % exception)
+				logging.error("Client error: (%s) %s" % (type(exception).__name__, exception))
+				self._connect_enable = False
 			else:
 				logging.debug("Client made connection")
 				if self.on_connect_function:
@@ -69,6 +81,9 @@ class LoopbackClient(Loopback):
 				self._connect_enable = False
 		if self.timeout:
 			self._timeout_thread.join()
+		if self._timed_out:
+			self.socket.close()
+			self.socket = None
 		logging.debug("exiting LoopbackClient connect")
 
 
@@ -82,9 +97,6 @@ class LoopbackServer(Loopback):
 		"""
 		Accepts a connection attempt.
 		"""
-		self._connect_enable = True
-		if self.timeout:
-			self._start_timeout_thread()
 		try:
 			listen_socket = socket(AF_INET, SOCK_STREAM)
 			listen_socket.setblocking(0)
@@ -93,8 +105,11 @@ class LoopbackServer(Loopback):
 			listen_socket.listen(5)
 			logging.debug("Server listening for connections")
 		except Exception as exception:
-			logging.error("Server error: %s" % exception)
-			self._connect_enable = False
+			logging.error("Server error: (%s) %s" % (type(exception).__name__, exception))
+			return
+		if self.timeout:
+			self._start_timeout_thread()
+		self._connect_enable = True
 		while self._connect_enable:
 			try:
 				self.socket, address_pair = listen_socket.accept()
@@ -110,5 +125,8 @@ class LoopbackServer(Loopback):
 				self._connect_enable = False
 		if self.timeout:
 			self._timeout_thread.join()
+		if self._timed_out:
+			self.socket.close()
+			self.socket = None
 		logging.debug("exiting LoopbackServer connect")
 
