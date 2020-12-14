@@ -136,13 +136,12 @@ class Messenger:
 
 if __name__ == '__main__':
 
-	import optparse, time, threading, sys
+	import argparse, time, threading, sys
 
-	p = optparse.OptionParser()
-	p.add_option('--loopback', '-l', action='store_true')
-	p.add_option('--verbose', '-v', action='store_true')
-	p.add_option('--transport', type='string', default='json')
-	options, arguments = p.parse_args()
+	p = argparse.ArgumentParser()
+	p.add_argument('--verbose', '-v', action='store_true')
+	p.add_argument('--transport', type=str, default='json')
+	options = p.parse_args()
 
 	logging.basicConfig(
 		stream=sys.stdout,
@@ -175,7 +174,7 @@ if __name__ == '__main__':
 			_test_enable = False
 		logging.debug("Client connected")
 		_test_comms(sock)
-		logging.debug("Exiting _test_client")
+		logging.debug("_test_client exiting")
 
 
 	def _test_server():
@@ -198,7 +197,7 @@ if __name__ == '__main__':
 				break
 		logging.debug("Server connected")
 		_test_comms(sock)
-		logging.debug("Exiting _test_server")
+		logging.debug("_test_server exiting")
 
 
 	def _test_comms(sock):
@@ -224,9 +223,9 @@ if __name__ == '__main__':
 		_quitting_time = time.time() + 10.0
 		while _test_enable:
 			if time.time() >= _quitting_time: break
-			time.sleep(0.1)
+			time.sleep(0.05)
 		_test_enable = False
-		logging.debug("Exiting _test_timeout")
+		logging.debug("_test_timeout exiting")
 
 
 	# Create threads:

@@ -107,7 +107,7 @@ class Message:
 		"""
 		encoded_data = self.encode()
 		data_len = len(encoded_data)
-		logging.debug("Encoded %d-bytes of message data" % data_len)
+		logging.debug("Encoded %d bytes of message data" % data_len)
 		payload = bytearray([data_len + 2, self.code])
 		return payload + encoded_data if data_len else payload
 
