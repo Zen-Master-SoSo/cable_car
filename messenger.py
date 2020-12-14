@@ -35,6 +35,7 @@ class Messenger:
 		sock - an opened TCP socket to communicate with.
 		transport - a string identifying the transport class to use.
 		"""
+		global Message
 		self.__sock = sock
 		self.transport = transport
 		module = importlib.import_module("cable_car.%s_messages" % self.transport)
