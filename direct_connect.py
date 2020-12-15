@@ -74,16 +74,18 @@ class DirectClient(DirectConnect):
 			try:
 				self.socket.connect((self.ip_address, self.tcp_port))
 			except ConnectionRefusedError:
-				pass
+				time.sleep(0.5)
+			except ConnectionAbortedError:
+				time.sleep(0.5)
 			except Exception as exception:
 				logging.error("Client error: (%s) %s" % (type(exception).__name__, exception))
-				self._connect_enable = False
+				#self._connect_enable = False
 			else:
 				logging.debug("Client made connection")
 				self._connect_enable = False
 		if self.timeout:
 			self._timeout_thread.join()
-		if self._timed_out:
+		if self._timed_out and self.socket is not None:
 			self.socket.close()
 			self.socket = None
 		logging.debug("exiting DirectClient connect")
@@ -125,7 +127,7 @@ class DirectServer(DirectConnect):
 				self._connect_enable = False
 		if self.timeout:
 			self._timeout_thread.join()
-		if self._timed_out:
+		if self._timed_out and self.socket is not None:
 			self.socket.close()
 			self.socket = None
 		logging.debug("exiting DirectServer connect")
