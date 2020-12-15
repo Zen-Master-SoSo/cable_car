@@ -17,8 +17,9 @@ class DirectConnect:
 	socket					= None		# Connected socket
 
 
-	def __init__(self, tcp_port=8223):
+	def __init__(self, tcp_port=8223, ip_address="127.0.0.1"):
 		self.tcp_port = tcp_port
+		self.ip_address = ip_address
 
 
 	def _start_timeout_thread(self):
@@ -38,6 +39,10 @@ class DirectConnect:
 				self._timed_out = True
 				break
 			time.sleep(0.25)
+		self._connect_enable = False
+
+
+	def cancel(self):
 		self._connect_enable = False
 
 
@@ -67,7 +72,7 @@ class DirectClient(DirectConnect):
 		self._connect_enable = True
 		while self._connect_enable:
 			try:
-				self.socket.connect(("127.0.0.1", self.tcp_port))
+				self.socket.connect((self.ip_address, self.tcp_port))
 			except ConnectionRefusedError:
 				pass
 			except Exception as exception:
@@ -98,7 +103,7 @@ class DirectServer(DirectConnect):
 			listen_socket = socket(AF_INET, SOCK_STREAM)
 			listen_socket.setblocking(False)
 			listen_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-			listen_socket.bind(("127.0.0.1", self.tcp_port))
+			listen_socket.bind((self.ip_address, self.tcp_port))
 			listen_socket.listen(5)
 			logging.debug("Server listening for connections")
 		except Exception as exception:
