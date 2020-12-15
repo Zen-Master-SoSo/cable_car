@@ -74,7 +74,7 @@ class Messenger:
 		Call this function regularly to send/receive encoded/decoded Message class objects. """
 
 		if self.closed:
-			logging.debug("Messenger %d trying to do transfers when closed!" % self._instance_id)
+			logging.debug("Messenger %d xfer when closed!" % self._instance_id)
 			return False
 
 		# Do select()
@@ -105,14 +105,14 @@ class Messenger:
 				self.close()
 			else:
 				if len(data):
-					logging.debug("Messenger %d read %d bytes" % (self._instance_id, len(data)))
+					logging.debug("Read %d bytes on Messenger %d" % (len(data), self._instance_id))
 					self.__read_buffer += data
 
 		# Write data if necessary:
 		if writable_sockets and len(self.__write_buffer):
 			try:
 				bytes_sent = self.__sock.send(self.__write_buffer)
-				logging.debug("Messenger %d wrote %d bytes" % (self._instance_id, bytes_sent))
+				logging.debug("Wrote %d bytes on Messenger %d" % (bytes_sent, self._instance_id))
 			except BrokenPipeError:
 				self.closed = True
 			except IOError as e:
