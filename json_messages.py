@@ -78,7 +78,7 @@ class Message:
 				if payload[0] in cls.registry:
 					message = cls.registry[payload[0]]()
 					message.decode_attributes(payload[1])
-					return message, pos
+					return message, pos + 1
 				else:
 					raise KeyError("%s is not a registered Message class" % payload[0])
 		return None, 0

@@ -78,7 +78,7 @@ class Message:
 				message = cls.registry[read_buffer[1]]()
 				logging.debug("%s: decoding %d-byte message" % (message.__class__.__name__, read_buffer[0]))
 				if read_buffer[0] > 2:
-					message.decode(read_buffer[2:])
+					message.decode(read_buffer[2:read_buffer[0]])
 				return message, read_buffer[0]
 			else:
 				raise Exception("%d is not a registered Message code" % read_buffer[1])
@@ -135,7 +135,6 @@ class Message:
 
 
 class MsgIdentify(Message):
-
 	code = 0x1
 
 	def __init__(self, username=None, hostname=None):
