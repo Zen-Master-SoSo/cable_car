@@ -221,9 +221,9 @@ class BroadcastConnector:
 
 	def addresses(self):
 		"""
-		Returns a list of ip addresses of computers connected (as either server or
-		client). Only valid after broadcasting has started, and really only valid after
-		broadcasting is finished.
+		Returns a list of ip addresses of computers connected.
+		Only valid after broadcasting has started, and really only valid after
+		broadcasting is complete.
 		"""
 		return self.sockets.keys()
 

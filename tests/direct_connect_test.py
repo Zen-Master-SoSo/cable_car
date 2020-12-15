@@ -1,12 +1,11 @@
 import pytest, logging, threading, time, sys
 from socket import socket
 from cable_car.direct_connect import DirectClient, DirectServer
-from cable_car.json_messages import MsgIdentify
 from cable_car.messenger import Messenger
 
 
 def client():
-	global test_enable
+	global test_enable, trans
 	loopback_client = DirectClient()
 	loopback_client.timeout = 10.0
 	loopback_client.connect()
@@ -52,9 +51,20 @@ def watchdog():
 	assert not timed_out
 
 
-def test_loopback():
-	global test_enable
+def test_direct_json():
+	global transport
+	transport = "json"
+	doit()
 
+
+def test_direct_byte():
+	global transport
+	transport = "byte"
+	doit()
+
+
+def doit():
+	global test_enable
 	test_enable = True
 
 	# Create threads:
@@ -81,4 +91,5 @@ if __name__ == "__main__":
 		level=logging.DEBUG,
 		format="%(relativeCreated)6d [%(filename)24s:%(lineno)3d] %(message)s"
 	)
-	test_loopback()
+	test_direct_json()
+	test_direct_byte()

@@ -79,31 +79,19 @@ def watchdog():
 
 
 def test_messenger_json():
-	global test_enable, transport
+	global transport
 	transport = "json"
-
-	# Create threads:
-	client_thread = threading.Thread(target=client)
-	server_thread = threading.Thread(target=server)
-	timeout_thread = threading.Thread(target=watchdog)
-
-	# Start threads:
-	test_enable = True
-	client_thread.start()
-	server_thread.start()
-	timeout_thread.start()
-
-	# Wait for threads to exit:
-	client_thread.join()
-	server_thread.join()
-	test_enable = False
-	timeout_thread.join()
-
+	doit()
 
 
 def test_messenger_byte():
-	global test_enable, transport
+	global transport
 	transport = "byte"
+	doit()
+
+
+def doit():
+	global test_enable
 
 	# Create threads:
 	client_thread = threading.Thread(target=client)
