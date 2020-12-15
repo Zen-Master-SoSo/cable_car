@@ -15,7 +15,6 @@ class Loopback:
 	_timeout_thread			= None		# Thread; waits self.timeout seconds then flips self._connect_enable
 	_timed_out				= False
 	socket					= None		# Connected socket
-	on_connect_function		= None		# Function to call when a connection is made.
 
 
 	def __init__(self, tcp_port=8223):
@@ -76,8 +75,6 @@ class LoopbackClient(Loopback):
 				self._connect_enable = False
 			else:
 				logging.debug("Client made connection")
-				if self.on_connect_function:
-					self.on_connect_function(self.socket)
 				self._connect_enable = False
 		if self.timeout:
 			self._timeout_thread.join()
@@ -120,8 +117,6 @@ class LoopbackServer(Loopback):
 				self._connect_enable = False
 			else:
 				logging.debug("Server accepted connection")
-				if self.on_connect_function:
-					self.on_connect_function(self.socket)
 				self._connect_enable = False
 		if self.timeout:
 			self._timeout_thread.join()

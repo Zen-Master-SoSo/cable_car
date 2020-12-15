@@ -1,83 +1,71 @@
-import pytest, threading, time
+import pytest, logging, threading, time, sys
 from socket import socket
 from cable_car.loopback import LoopbackClient, LoopbackServer
-from cable_car.json_messages import *
+from cable_car.json_messages import MsgIdentify
 from cable_car.messenger import Messenger
 
 
+def client():
+	global test_enable
+	loopback_client = LoopbackClient()
+	loopback_client.timeout = 10.0
+	loopback_client.connect()
+	logging.debug("loopback_client.connect() returned")
+	assert isinstance(loopback_client.socket, socket)
+	loopback_client.socket.setblocking(False)
+	data = ""
+	try:
+		data = loopback_client.socket.recv(1024)
+		assert data != ""
+	except BlockingIOError as e:
+		pass
+	logging.debug("Client OKAY.")
+
+
+def server():
+	global test_enable
+	loopback_server = LoopbackServer()
+	loopback_server.timeout = 10.0
+	loopback_server.connect()
+	logging.debug("loopback_server.connect() returned")
+	assert isinstance(loopback_server.socket, socket)
+	loopback_server.socket.setblocking(False)
+	data = ""
+	try:
+		data = loopback_server.socket.recv(1024)
+		assert data != ""
+	except BlockingIOError as e:
+		pass
+	logging.debug("Server OKAY.")
+
+
+def watchdog():
+	global test_enable
+	quitting_time = time.time() + 5.0
+	timed_out = False
+	while test_enable:
+		if time.time() >= quitting_time:
+			timed_out = True
+			break
+		time.sleep(0.05)
+	test_enable = False
+	assert not timed_out
+
+
 def test_loopback():
-	global test_enable, client_id, server_id
+	global test_enable
 
 	test_enable = True
-	client_id = None
-	server_id = None
-
-
-	def on_connect(sock):
-		logging.debug("Conected %s:%s" % (sock.getsockname()))
-
-
-	def _test_client():
-		global test_enable, client_id
-		client = LoopbackClient()
-		client.timeout = 10.0
-		client.on_connect_function = on_connect
-		client.connect()
-		assert isinstance(client.socket, socket)
-		if isinstance(client.socket, socket):
-			msgr = Messenger(client.socket)
-			msgr.send(MsgIdentify())
-			while test_enable:
-				msgr.xfer()
-				msg = msgr.get()
-				if msg is None:
-					continue
-				assert isinstance(msg, MsgIdentify)
-				client_id = msg
-				break
-
-
-	def _test_server():
-		global test_enable, server_id
-		server = LoopbackServer()
-		server.timeout = 10.0
-		server.on_connect_function = on_connect
-		server.connect()
-		assert isinstance(server.socket, socket)
-		if isinstance(server.socket, socket):
-			msgr = Messenger(server.socket)
-			msgr.send(MsgIdentify())
-			while test_enable:
-				msgr.xfer()
-				msg = msgr.get()
-				if msg is None:
-					continue
-				assert isinstance(msg, MsgIdentify)
-				server_id = msg
-				break
-
-
-	def _test_timeout():
-		global test_enable
-		quitting_time = time.time() + 5.0
-		timed_out = False
-		while test_enable:
-			if time.time() >= quitting_time:
-				timed_out = True
-				break
-			time.sleep(0.05)
-		test_enable = False
-		assert not timed_out
-
 
 	# Create threads:
-	client_thread = threading.Thread(target=_test_client)
-	server_thread = threading.Thread(target=_test_server)
-	timeout_thread = threading.Thread(target=_test_timeout)
+	client_thread = threading.Thread(target=client)
+	server_thread = threading.Thread(target=server)
+	timeout_thread = threading.Thread(target=watchdog)
 
 	# Start threads:
-	client_thread.start()
 	server_thread.start()
+	time.sleep(0.25)
+	client_thread.start()
 	timeout_thread.start()
 
 	# Wait for threads to exit:
@@ -85,8 +73,6 @@ def test_loopback():
 	server_thread.join()
 	test_enable = False
 	timeout_thread.join()
-	assert client_id is not None
-	assert server_id is not None
 
 
 if __name__ == "__main__":

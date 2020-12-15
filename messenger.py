@@ -19,7 +19,6 @@ on the receiving end.
 
 import logging, socket, importlib
 from select import select
-from cable_car.loopback import LoopbackClient, LoopbackServer
 
 
 
@@ -29,26 +28,6 @@ class Messenger:
 
 	buffer_size		= 1024
 	instance_count	= 0
-
-
-	@classmethod
-	def client_connection(cls, tcp_port=8222, transport="json", timeout=10.0):
-		connector = LoopbackClient(tcp_port)
-		connector.timeout = timeout
-		connector.connect()
-		if connector.socket is None:
-			raise Exception("Could not connect to server")
-		return Messenger(connector.socket)
-
-
-	@classmethod
-	def server_connection(cls, tcp_port=8222, transport="json", timeout=10.0):
-		connector = LoopbackServer(tcp_port)
-		connector.timeout = timeout
-		connector.connect()
-		if connector.socket is None:
-			raise Exception("No clients connected")
-		return Messenger(connector.socket)
 
 
 	def __init__(self, sock, transport="json"):
@@ -173,11 +152,7 @@ if __name__ == '__main__':
 	)
 
 	# Import the selected message class:
-	try:
-		messages = importlib.import_module("cable_car.%s_messages" % options.transport)
-	except ImportError:
-		logging.error("%s is not a valid message transport" % options.transport)
-		sys.exit(1)
+	messages = importlib.import_module("cable_car.%s_messages" % options.transport)
 	Message = getattr(messages, "Message")
 	MsgIdentify = getattr(messages, "MsgIdentify")
 
