@@ -125,7 +125,7 @@ class Messenger:
 		"""Returns a Message object if there is data available, otherwise returns None """
 		message, byte_len = Message.peel_from_buffer(self.__read_buffer)
 		if byte_len:
-			self.__read_buffer = self.__read_buffer[byte_len + 1:]
+			self.__read_buffer = self.__read_buffer[byte_len:]
 			return message
 		return None
 
