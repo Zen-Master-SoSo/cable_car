@@ -45,9 +45,9 @@ def server():
 
 
 def do_comms(sock):
-	messages = importlib.import_module("cable_car.%s_messages" % transport)
-	Message = getattr(messages, "Message")
-	MsgIdentify = getattr(messages, "MsgIdentify")
+	module = importlib.import_module("cable_car.%s_messages" % transport)
+	Message = getattr(module, "Message")
+	MsgIdentify = getattr(module, "MsgIdentify")
 	msgr = Messenger(sock, transport)
 	msgr.id_sent = False
 	msgr.id_received = False
