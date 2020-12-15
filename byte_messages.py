@@ -76,7 +76,7 @@ class Message:
 		if(len(read_buffer) and len(read_buffer) >= read_buffer[0]):
 			if read_buffer[1] in cls.registry:
 				message = cls.registry[read_buffer[1]]()
-				logging.debug("%s: decoding %d-byte message" % (message.__class__.__name__, read_buffer[0]))
+				logging.debug('Decoding %d-byte message "%s"' % (read_buffer[0], message.__class__.__name__))
 				if read_buffer[0] > 2:
 					message.decode(read_buffer[2:read_buffer[0]])
 				return message, read_buffer[0]
@@ -107,7 +107,7 @@ class Message:
 		"""
 		encoded_data = self.encode()
 		message_len = len(encoded_data) + 2
-		logging.debug("%s: encoded %d-byte message" % (self.__class__.__name__, message_len))
+		logging.debug('Encoded %d-byte message "%s"' % (message_len, self.__class__.__name__))
 		payload = bytearray([message_len, self.code])
 		return payload + encoded_data if encoded_data else payload
 
