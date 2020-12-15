@@ -74,9 +74,9 @@ class Message:
 		Returns a tuple (Message, bytes_read).
 		"""
 		if(len(read_buffer) and len(read_buffer) >= read_buffer[0]):
-			logging.debug("Received %d-byte message" % read_buffer[0])
 			if read_buffer[1] in cls.registry:
 				message = cls.registry[read_buffer[1]]()
+				logging.debug("%s: decoding %d-byte message" % (message.__class__.__name__, read_buffer[0]))
 				if read_buffer[0] > 2:
 					message.decode(read_buffer[2:])
 				return message, read_buffer[0]
@@ -106,10 +106,10 @@ class Message:
 		"encode" function in your subclass instead.
 		"""
 		encoded_data = self.encode()
-		data_len = len(encoded_data)
-		logging.debug("Encoded %d bytes of message data" % data_len)
-		payload = bytearray([data_len + 2, self.code])
-		return payload + encoded_data if data_len else payload
+		message_len = len(encoded_data) + 2
+		logging.debug("%s: encoded %d-byte message" % (self.__class__.__name__, message_len))
+		payload = bytearray([message_len, self.code])
+		return payload + encoded_data if encoded_data else payload
 
 
 	def encode(self):
