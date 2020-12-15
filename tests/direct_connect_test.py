@@ -1,13 +1,13 @@
 import pytest, logging, threading, time, sys
 from socket import socket
-from cable_car.loopback import LoopbackClient, LoopbackServer
+from cable_car.direct_connect import DirectClient, DirectServer
 from cable_car.json_messages import MsgIdentify
 from cable_car.messenger import Messenger
 
 
 def client():
 	global test_enable
-	loopback_client = LoopbackClient()
+	loopback_client = DirectClient()
 	loopback_client.timeout = 10.0
 	loopback_client.connect()
 	logging.debug("loopback_client.connect() returned")
@@ -24,7 +24,7 @@ def client():
 
 def server():
 	global test_enable
-	loopback_server = LoopbackServer()
+	loopback_server = DirectServer()
 	loopback_server.timeout = 10.0
 	loopback_server.connect()
 	logging.debug("loopback_server.connect() returned")

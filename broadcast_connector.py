@@ -19,8 +19,8 @@ class BroadcastConnector:
 	local_ip				= None		# Used especially to filter localhost when not "allow_loopback"
 	tcp_connect_timeout		= 2.0		# Used when making a connection to a server which has broadcasted
 	timeout					= 0.0		# Seconds to wait before quitting; 0.0 = no timeout
-	_broadcast_enable		= False		# Flag which tells the threads to exit when it goes False
-	__timeout_thread		= None		# Thread; waits self.timeout seconds then flips self._broadcast_enable
+	_connect_enable			= False		# Attempt to connect only while this flag stays "True"
+	__timeout_thread		= None		# Thread; waits self.timeout seconds then flips self._connect_enable
 	__udp_broadcast_thread	= None		# Thread; broadcasts on udp_port
 	__udp_listen_thread		= None		# Thread; listens for broadcast on udp_port connects on tcp_port
 	__tcp_listen_thread		= None		# Thread; listens for tcp connection requests on tcp_port
@@ -49,10 +49,11 @@ class BroadcastConnector:
 
 	def _start_connector_threads(self):
 		"""
+		BroadcastConnector._start_connector_threads()
 		Non-blocking function which starts broadcast/listen and doesn't wait for
 		threads to exit.
 		"""
-		self._broadcast_enable = True	# In case of re-start
+		self._connect_enable = True	# In case of re-start
 		self.local_ip = self.get_my_ip()
 		# Create a lock for appending to "sockets"
 		self.__socket_lock = threading.Lock()
@@ -80,14 +81,14 @@ class BroadcastConnector:
 			if self.timeout:
 				self.__timeout_thread.join()
 		except KeyboardInterrupt:
-			self._broadcast_enable = False
+			self._connect_enable = False
 
 
 	def stop_broadcasting(self):
 		"""
-		Stop both broadcasting and listening by setting the "_broadcast_enable" flag False.
+		Stop both broadcasting and listening by setting the "_connect_enable" flag False.
 		"""
-		self._broadcast_enable = False
+		self._connect_enable = False
 
 
 	def _timeout(self):
@@ -96,18 +97,18 @@ class BroadcastConnector:
 		class to any value other than zero before starting connector threads.
 		"""
 		quitting_time = time.time() + self.timeout
-		while self._broadcast_enable:
+		while self._connect_enable:
 			if time.time() >= quitting_time:
 				logging.debug("timed out")
 				break
 			time.sleep(0.25)
-		self._broadcast_enable = False
+		self._connect_enable = False
 
 
 	def __udp_broadcast(self):
 		"""
 		This thread sends a UDP packet to the broadcast address/port on a regular
-		interval as long as "self._broadcast_enable" is True.
+		interval as long as "self._connect_enable" is True.
 		"""
 		logging.debug("%s sending broadcast messages from %s, port %s" % (threading.current_thread().name, self.local_ip, self.udp_port))
 		try:
@@ -116,10 +117,10 @@ class BroadcastConnector:
 		except Exception as e:
 			logging.error(e)
 			self._udp_broadcast_exc = e
-			self._broadcast_enable = False
+			self._connect_enable = False
 			return
 		next_broadcast = time.time() + 0.1
-		while self._broadcast_enable:
+		while self._connect_enable:
 			time.sleep(0.25)
 			if time.time() >= next_broadcast:
 				broadcast_socket.sendto(b"BROADCAST", ("255.255.255.255", self.udp_port))
@@ -145,9 +146,9 @@ class BroadcastConnector:
 		except Exception as e:
 			logging.error(e)
 			self._udp_listen_exc = e
-			self._broadcast_enable = False
+			self._connect_enable = False
 			return
-		while self._broadcast_enable:
+		while self._connect_enable:
 			try:
 				data, address_pair = listen_socket.recvfrom(1024)
 			except BlockingIOError as be:
@@ -155,7 +156,7 @@ class BroadcastConnector:
 			except Exception as e:
 				logging.error(e)
 				self._udp_listen_exc = e
-				self._broadcast_enable = False
+				self._connect_enable = False
 				return
 			else:
 				# logging.debug("%s received broadcast packet from %s, port %s" % (threading.current_thread().name, address_pair[0], address_pair[1]))
@@ -195,9 +196,9 @@ class BroadcastConnector:
 		except Exception as e:
 			logging.error(e)
 			self._tcp_listen_exc = e
-			self._broadcast_enable = False
+			self._connect_enable = False
 			return
-		while self._broadcast_enable:
+		while self._connect_enable:
 			try:
 				sock, address_pair = listen_socket.accept()
 			except BlockingIOError as be:
@@ -205,7 +206,7 @@ class BroadcastConnector:
 			except Exception as e:
 				logging.error(e)
 				self._tcp_listen_exc = e
-				self._broadcast_enable = False
+				self._connect_enable = False
 				return
 			else:
 				logging.debug("%s accepted TCP connection from %s" % (threading.current_thread().name, address_pair[0]))

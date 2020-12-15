@@ -1,17 +1,17 @@
 """
-Provides the LoopbackClient and LoopbackServer classes for testing.
+Provides the DirectClient and DirectServer classes for testing.
 """
 import threading, time, logging
 from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, SOL_SOCKET, SO_BROADCAST, SO_REUSEADDR
 
 
-class Loopback:
+class DirectConnect:
 	"""
-	Base class of Loopback with timout support.
+	Base class of DirectConnect with timout support.
 	"""
 
 	timeout					= 0.0		# Seconds to wait before quitting; 0.0 = no timeout
-	_connect_enable			= True
+	_connect_enable			= True		# Attempt to connect only while this flag stays "True"
 	_timeout_thread			= None		# Thread; waits self.timeout seconds then flips self._connect_enable
 	_timed_out				= False
 	socket					= None		# Connected socket
@@ -42,7 +42,7 @@ class Loopback:
 
 
 
-class LoopbackClient(Loopback):
+class DirectClient(DirectConnect):
 	"""
 	Makes a TCP connection on the loopback address and returns the connected socket.
 	"""
@@ -81,11 +81,11 @@ class LoopbackClient(Loopback):
 		if self._timed_out:
 			self.socket.close()
 			self.socket = None
-		logging.debug("exiting LoopbackClient connect")
+		logging.debug("exiting DirectClient connect")
 
 
 
-class LoopbackServer(Loopback):
+class DirectServer(DirectConnect):
 	"""
 	Makes a TCP connection on the loopback address and returns the connected socket.
 	"""
@@ -96,7 +96,7 @@ class LoopbackServer(Loopback):
 		"""
 		try:
 			listen_socket = socket(AF_INET, SOCK_STREAM)
-			listen_socket.setblocking(0)
+			listen_socket.setblocking(False)
 			listen_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 			listen_socket.bind(("127.0.0.1", self.tcp_port))
 			listen_socket.listen(5)
@@ -123,5 +123,5 @@ class LoopbackServer(Loopback):
 		if self._timed_out:
 			self.socket.close()
 			self.socket = None
-		logging.debug("exiting LoopbackServer connect")
+		logging.debug("exiting DirectServer connect")
 
