@@ -144,14 +144,14 @@ class MsgIdentify(Message):
 
 	def encode(self):
 		"""
-		Encode username@hostname.
+		Encode as "username@hostname".
 		"""
 		return ("%s@%s" % (self.username, self.hostname)).encode('ASCII')
 
 
 	def decode(self, msg_data):
 		"""
-		Read username and hostname from message data.
+		Decode username and hostname from message data.
 		"""
 		self.username, self.hostname = msg_data.decode().split("@")
 
