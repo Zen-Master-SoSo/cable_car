@@ -159,9 +159,8 @@ def test_multiple_messages_in_buffer():
 if __name__ == "__main__":
 	import logging
 	logging.basicConfig(
-		stream=sys.stdout,
-		level=logging.DEBUG,
-		format="[%(filename)24s:%(lineno)3d] %(message)s"
+		level = logging.DEBUG,
+		format = "[%(filename)24s:%(lineno)3d] %(message)s"
 	)
 	test_multiple_messages_in_buffer()
 

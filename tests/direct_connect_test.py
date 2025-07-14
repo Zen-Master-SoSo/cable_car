@@ -87,9 +87,8 @@ def doit():
 
 if __name__ == "__main__":
 	logging.basicConfig(
-		stream=sys.stdout,
-		level=logging.DEBUG,
-		format="%(relativeCreated)6d [%(filename)24s:%(lineno)3d] %(message)s"
+		level = logging.DEBUG,
+		format = "%(relativeCreated)6d [%(filename)24s:%(lineno)3d] %(message)s"
 	)
 	test_direct_json()
 	test_direct_byte()
