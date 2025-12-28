@@ -65,7 +65,7 @@ class DirectClient(DirectConnect):
 			self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 			logging.debug("Client connecting")
 		except Exception as exception:
-			logging.error("Client error: (%s) %s" % (type(exception).__name__, exception))
+			logging.error("Client error: (%s) %s" % (exception.__class__.__name__, exception))
 			return
 		if self.timeout:
 			self._start_timeout_thread()
@@ -78,7 +78,7 @@ class DirectClient(DirectConnect):
 			except ConnectionAbortedError:
 				time.sleep(0.5)
 			except Exception as exception:
-				logging.error("Client error: (%s) %s" % (type(exception).__name__, exception))
+				logging.error("Client error: (%s) %s" % (exception.__class__.__name__, exception))
 				#self._connect_enable = False
 			else:
 				logging.debug("Client made connection")
@@ -109,7 +109,7 @@ class DirectServer(DirectConnect):
 			listen_socket.listen(5)
 			logging.debug("Server listening for connections")
 		except Exception as exception:
-			logging.error("Server error: (%s) %s" % (type(exception).__name__, exception))
+			logging.error("Server error: (%s) %s" % (exception.__class__.__name__, exception))
 			return
 		if self.timeout:
 			self._start_timeout_thread()
