@@ -22,4 +22,4 @@ A lightweight, simple set of classes for opening a TCP socket (to a particular
 IP or using UDP broadcast) and passing messages between them.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
